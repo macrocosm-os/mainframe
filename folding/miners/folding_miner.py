@@ -58,23 +58,25 @@ def attach_files(
     return synapse
 
 
-async def upload_to_s3(session: aiohttp.ClientSession, presigned_url: dict, file_path: str) -> None:
+async def upload_to_s3(presigned_url: dict, file_path: str) -> None:
     """Asynchronously upload a file to S3 using presigned URL"""
     try:
         start_time = time.time()
         data = FormData()
         for key, value in presigned_url["fields"].items():
             data.add_field(key, value)
-        
+
         with open(file_path, "rb") as f:
             data.add_field("file", f, filename="trajectory.dcd")
-            
-            async with session.post(
-                presigned_url["url"],
-                data=data
-            ) as response:
-                if response.status != 204:
-                    logger.error(f"Failed to upload trajectory to s3: {await response.text()}")
+
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    presigned_url["url"],
+                    data=data
+                ) as response:
+                    if response.status != 204:
+                        logger.error(f"Failed to upload trajectory to s3: {await response.text()}")
+
     except Exception as e:
         logger.error(f"Error uploading to S3: {e}")
         get_tracebacks()
@@ -114,7 +116,6 @@ def attach_files_to_synapse(
         trajectory_path = os.path.join(data_directory, "trajectory.dcd")
         if os.path.exists(trajectory_path):
             asyncio.create_task(upload_to_s3(
-                session=aiohttp.ClientSession(),
                 presigned_url=synapse.presigned_url,
                 file_path=trajectory_path
             ))
