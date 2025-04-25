@@ -7,7 +7,8 @@ import bittensor as bt
 import numpy as np
 import pandas as pd
 from openmm import app
-
+import MDAnalysis as mda
+from MDAnalysis.analysis.rms import rmsd
 from folding.base.evaluation import BaseEvaluator
 from folding.base.simulation import OpenMMSimulation
 from folding.utils import constants as c
@@ -106,10 +107,24 @@ class SyntheticMDEvaluator(BaseEvaluator):
         )
 
         try:
+
+            self.trajectory_path = os.path.join(
+                self.miner_data_directory, "trajectory.dcd"
+            )
+
+            # download the trajectory from s3
+            self.s3_handler.get(self.trajectory_s3_path, self.trajectory_path)
+
+            # check if file exists
+            if not os.path.exists(self.trajectory_path):
+                logger.error(
+                    f"Trajectory file {self.trajectory_path} does not exist... Skipping!"
+                )
+                return False
+
             # NOTE: The seed written in the self.system_config is not used here
             # because the miner could have used something different and we want to
             # make sure that we are using the correct seed.
-
             logger.info(
                 f"Recreating miner {self.hotkey_alias} simulation in state: {self.current_state}"
             )
@@ -129,12 +144,6 @@ class SyntheticMDEvaluator(BaseEvaluator):
             self.log_file_path = os.path.join(
                 self.miner_data_directory, self.md_outputs_exts["log"]
             )
-            self.trajectory_path = os.path.join(
-                self.miner_data_directory, "trajectory.dcd"
-            )
-
-            # download the trajectory from s3
-            self.s3_handler.get(self.trajectory_s3_path, self.trajectory_path)
 
             simulation.loadCheckpoint(checkpoint_path)
 
@@ -210,7 +219,7 @@ class SyntheticMDEvaluator(BaseEvaluator):
                     f"Miner {self.hotkey_alias} has modified the system in unintended ways... Skipping!"
                 )
             self.number_of_checkpoints = (
-                int(self.log_file['#"Step"'].iloc[-1] / 10000) - 1
+                int(self.cpt_step // self.system_config.save_interval_checkpoint) - 1
             )
             if self.number_of_checkpoints < c.MAX_CHECKPOINTS_TO_VALIDATE:
                 raise ValidationError(
@@ -338,6 +347,7 @@ class SyntheticMDEvaluator(BaseEvaluator):
                 result,
             ) = self.is_checkpoint_valid(
                 checkpoint_path=self.checkpoint_path,
+                current_cpt_step=self.cpt_step,
                 steps_to_run=c.MAX_SIMULATION_STEPS_FOR_EVALUATION,
                 checkpoint_num="final",
             )
@@ -395,6 +405,10 @@ class SyntheticMDEvaluator(BaseEvaluator):
                     with open(temp_checkpoint_path, "wb") as f:
                         f.write(checkpoint_data)
 
+                    cpt_step = (
+                        int(checkpoint_num) + 1
+                    ) * self.system_config.save_interval_checkpoint
+
                     (
                         is_valid,
                         checked_energies,
@@ -402,6 +416,7 @@ class SyntheticMDEvaluator(BaseEvaluator):
                         result,
                     ) = self.is_checkpoint_valid(
                         checkpoint_path=temp_checkpoint_path,
+                        current_cpt_step=cpt_step,
                         steps_to_run=c.INTERMEDIATE_CHECKPOINT_STEPS,
                         checkpoint_num=checkpoint_num,
                     )
@@ -544,9 +559,45 @@ class SyntheticMDEvaluator(BaseEvaluator):
 
         return miner_energies
 
+    def calculate_rmsd(
+        self, miner_trajectory, validator_trajectory, start_frame, end_frame
+    ):
+        """Calculate the RMSD between the miner and validator trajectories for every frame.
+
+        Args:
+            miner_trajectory: MDAnalysis Universe for miner trajectory
+            validator_trajectory: MDAnalysis Universe for validator trajectory
+
+        Returns:
+            list[float]: List of RMSD values for each frame
+        """
+        # Get backbone atoms for both trajectories
+        miner_bb = miner_trajectory.select_atoms("backbone")
+        validator_bb = validator_trajectory.select_atoms("backbone")
+
+        rmsds = []
+
+        # Iterate through frames in both trajectories
+        for miner_ts, validator_ts in zip(
+            miner_trajectory.trajectory[start_frame:end_frame],
+            validator_trajectory.trajectory,
+        ):
+            # Get coordinates for current frame
+            miner_positions = miner_bb.positions.copy()
+            validator_positions = validator_bb.positions.copy()
+
+            # Calculate RMSD for current frame
+            rmsd_value = rmsd(
+                miner_positions, validator_positions, center=True, superposition=True
+            )
+            rmsds.append(rmsd_value)
+
+        return rmsds
+
     def is_checkpoint_valid(
         self,
         checkpoint_path: str,
+        current_cpt_step: int,
         steps_to_run: int = c.MIN_SIMULATION_STEPS,
         checkpoint_num: str = "final",
     ):
@@ -580,7 +631,6 @@ class SyntheticMDEvaluator(BaseEvaluator):
 
         # Load checkpoint
         simulation.loadCheckpoint(checkpoint_path)
-        current_cpt_step = simulation.currentStep
 
         if current_cpt_step + steps_to_run > self.log_step:
             raise ValidationError(message="simulation-step-out-of-range")
@@ -620,6 +670,10 @@ class SyntheticMDEvaluator(BaseEvaluator):
                 self.miner_data_directory, f"check_{checkpoint_num}.log"
             )
 
+            current_state_trajectory = os.path.join(
+                self.miner_data_directory, f"check_{checkpoint_num}.dcd"
+            )
+
             simulation, _ = self.md_simulator.create_simulation(
                 pdb=load_pdb_file(pdb_file=self.pdb_location),
                 system_config=self.system_config.get_config(),
@@ -636,6 +690,13 @@ class SyntheticMDEvaluator(BaseEvaluator):
                     10,
                     step=True,
                     potentialEnergy=True,
+                )
+            )
+
+            simulation.reporters.append(
+                app.DCDReporter(
+                    current_state_trajectory,
+                    self.system_config.save_interval_trajectory,
                 )
             )
 
@@ -694,6 +755,29 @@ class SyntheticMDEvaluator(BaseEvaluator):
                     f"hotkey {self.hotkey_alias} failed anomaly check for {self.pdb_id}, checkpoint_num: {checkpoint_num}, with median percent difference: {median_percent_diff} ... Skipping!"
                 )
                 raise ValidationError(message="anomaly")
+
+            # convert steps to frames
+            start_frame = (
+                current_cpt_step // self.system_config.save_interval_trajectory
+            )
+            end_frame = max_step // self.system_config.save_interval_trajectory
+
+            check_universe = mda.Universe(self.pdb_location, current_state_trajectory)
+            miner_universe = mda.Universe(self.pdb_location, self.trajectory_path)
+
+            # Calculate RMSD between the trajectories for each frame
+            rmsds = self.calculate_rmsd(
+                miner_universe, check_universe, start_frame, end_frame
+            )
+
+            # Get median RMSD value
+            median_rmsd = np.median(rmsds)
+
+            if median_rmsd > 1:
+                logger.warning(
+                    f"hotkey {self.hotkey_alias} failed trajectory RMSD check for {self.pdb_id}, checkpoint_num: {checkpoint_num}, with median RMSD: {median_rmsd} ... Skipping!"
+                )
+                raise ValidationError(message="trajectory-rmsd")
 
             # Save the intermediate or final pdb file if the run is valid
             positions = simulation.context.getState(getPositions=True).getPositions()

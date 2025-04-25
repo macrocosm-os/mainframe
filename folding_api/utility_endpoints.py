@@ -400,6 +400,7 @@ async def get_job_pool_status(
     job_ids: Optional[list[str]] = Query(
         None, description="List of specific job IDs to filter by"
     ),
+    pdb_search: Optional[str] = Query(None, description="Search query for PDB IDs"),
     page: int = Query(1, description="Page number to return (1-based)", ge=1),
     page_size: int = Query(
         100, description="Number of results per page", ge=1, le=1000
@@ -410,6 +411,7 @@ async def get_job_pool_status(
     Retrieve the status of the job pool.
 
     Filter jobs by their status and optionally by specific job IDs.
+    Search for jobs with specific PDB IDs using substring matching.
     Supports pagination through page and page_size parameters.
     """
     # Base query based on status
@@ -434,6 +436,17 @@ async def get_job_pool_status(
             query += f" AND job_id IN ('{job_ids_str}')"
         else:
             query += f" WHERE job_id IN ('{job_ids_str}')"
+
+    # Add pdb_search filter if provided
+    if pdb_search:
+        # Normalize the search query to lowercase
+        pdb_search = pdb_search.lower()
+
+        # Add LIKE clause for substring search on pdb_id
+        if " WHERE " in query:
+            query += f" AND LOWER(pdb_id) LIKE '%{pdb_search}%'"
+        else:
+            query += f" WHERE LOWER(pdb_id) LIKE '%{pdb_search}%'"
 
     # Get total count for pagination
     count_query = query.replace("SELECT *", "SELECT COUNT(*)")

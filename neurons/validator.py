@@ -42,9 +42,10 @@ from folding.validators.reward import run_evaluation_validation_pipeline
 from folding.validators.forward import create_new_challenge
 from folding.validators.protein import Protein
 from folding.registries.miner_registry import MinerRegistry
-from folding.organic.api import start_organic_api
+from folding.organic.api import start_organic_api_in_process
 
 from dotenv import load_dotenv
+import pickle
 
 load_dotenv()
 
@@ -117,6 +118,9 @@ class Validator(BaseValidatorNeuron):
             except ValueError as e:
                 raise f"Failed to create S3 handler, check your .env file: {e}"
 
+        self._organic_api_pipe = None
+        self._organic_api_process = None
+
     async def run_step(
         self,
         protein: Protein,
@@ -154,29 +158,27 @@ class Validator(BaseValidatorNeuron):
         system_config = protein.system_config.to_dict()
         system_config["seed"] = None  # We don't want to pass the seed to miners.
 
-        synapses = [
-            JobSubmissionSynapse(
-                pdb_id=protein.pdb_id,
-                job_id=job_id,
-                presigned_url=self.handler.generate_presigned_url(
-                    miner_hotkey=hotkey,
-                    pdb_id=protein.pdb_id,
-                    file_name="trajectory.dcd",
-                    method="put_object",
-                    expires_in=int(timeout),
-                ),
-            )
-            for hotkey in hotkeys
-        ]
-
         # Make calls to the network with the prompt - this is synchronous.
         logger.info("⏰ Waiting for miner responses ⏰")
         responses = await asyncio.gather(
             *[
                 self.dendrite.call(
-                    target_axon=axon, synapse=synapse, timeout=timeout, deserialize=True
+                    target_axon=axon,
+                    synapse=JobSubmissionSynapse(
+                        pdb_id=protein.pdb_id,
+                        job_id=job_id,
+                        presigned_url=self.handler.generate_presigned_url(
+                            miner_hotkey=hotkey,
+                            pdb_id=protein.pdb_id,
+                            file_name="trajectory.dcd",
+                            method="put_object",
+                            expires_in=int(timeout),
+                        ),
+                    ),
+                    timeout=timeout,
+                    deserialize=True,
                 )
-                for axon, synapse in zip(axons, synapses)
+                for axon, hotkey in zip(axons, hotkeys)
             ]
         )
 
@@ -540,7 +542,6 @@ class Validator(BaseValidatorNeuron):
             "response_status_messages",
             "response_returned_files_sizes",
             "response_returned_files",
-            "evaluator",
             "hotkeys",
             "log_file_path",
         ]:
@@ -701,10 +702,46 @@ class Validator(BaseValidatorNeuron):
             else:
                 logger.info("No need to commit again")
 
-            await start_organic_api(self._organic_scoring, self.config)
+            # Start the API in a separate process instead of the same process
+            (
+                self._organic_api_pipe,
+                self._organic_api_process,
+            ) = start_organic_api_in_process(self.config)
+
+            # Start task to handle pipe communication
+            self.loop.create_task(self._handle_organic_api_pipe())
         except Exception as e:
             logger.error(f"Error in start_organic_api: {traceback.format_exc()}")
             raise e
+
+    async def _handle_organic_api_pipe(self):
+        """
+        Handle jobs received from the organic API pipe.
+        """
+        logger.info("Starting organic API pipe handler")
+        while True:
+            try:
+                # Check if there's data in the pipe
+                if self._organic_api_pipe and self._organic_api_pipe.poll():
+                    # Get the data
+                    serialized_items = self._organic_api_pipe.recv()
+                    items = pickle.loads(serialized_items)
+
+                    # Process each item
+                    logger.info(f"Received {len(items)} jobs from organic API")
+                    for item in items:
+                        self._organic_scoring._organic_queue.add(item)
+
+                    # Log that we've added the items to the queue
+                    logger.info(f"Added {len(items)} jobs to organic queue")
+
+                # Sleep before checking again
+                await asyncio.sleep(0.1)
+            except Exception as e:
+                logger.error(
+                    f"Error handling organic API pipe: {traceback.format_exc()}"
+                )
+                await asyncio.sleep(1)
 
     async def reward_loop(self):
         logger.info("Starting reward loop.")
@@ -800,6 +837,18 @@ class Validator(BaseValidatorNeuron):
             logger.debug("Stopping validator in background thread.")
             self.should_exit = True
             self.is_running = False
+
+            # Terminate the organic API process if it exists
+            if self._organic_api_process and self._organic_api_process.is_alive():
+                logger.info("Terminating organic API process")
+                self._organic_api_process.terminate()
+                self._organic_api_process.join(timeout=5)
+                if self._organic_api_process.is_alive():
+                    logger.warning(
+                        "Organic API process did not terminate gracefully, killing"
+                    )
+                    self._organic_api_process.kill()
+
             os.system("pkill rqlited")
             self.loop.stop()
             logger.debug("Stopped")
