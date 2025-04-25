@@ -922,9 +922,9 @@ class SimulationManager:
         }
 
         self.STATES = ["nvt", "npt", "md_0_1"]
-        self.CHECKPOINT_INTERVAL = 10000
-        self.TRAJECTORY_INTERVAL = 10000
-        self.STATE_DATA_REPORTER_INTERVAL = 10
+        self.CHECKPOINT_INTERVAL = self.system_config.save_interval_checkpoint
+        self.TRAJECTORY_INTERVAL = self.system_config.save_interval_trajectory
+        self.STATE_DATA_REPORTER_INTERVAL = self.system_config.save_interval_log
         self.EXIT_REPORTER_INTERVAL = 10
 
     def create_empty_file(self, file_path: str):

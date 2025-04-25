@@ -158,29 +158,27 @@ class Validator(BaseValidatorNeuron):
         system_config = protein.system_config.to_dict()
         system_config["seed"] = None  # We don't want to pass the seed to miners.
 
-        synapses = [
-            JobSubmissionSynapse(
-                pdb_id=protein.pdb_id,
-                job_id=job_id,
-                presigned_url=self.handler.generate_presigned_url(
-                    miner_hotkey=hotkey,
-                    pdb_id=protein.pdb_id,
-                    file_name="trajectory.dcd",
-                    method="put_object",
-                    expires_in=int(timeout),
-                ),
-            )
-            for hotkey in hotkeys
-        ]
-
         # Make calls to the network with the prompt - this is synchronous.
         logger.info("⏰ Waiting for miner responses ⏰")
         responses = await asyncio.gather(
             *[
                 self.dendrite.call(
-                    target_axon=axon, synapse=synapse, timeout=timeout, deserialize=True
+                    target_axon=axon,
+                    synapse=JobSubmissionSynapse(
+                        pdb_id=protein.pdb_id,
+                        job_id=job_id,
+                        presigned_url=self.handler.generate_presigned_url(
+                            miner_hotkey=hotkey,
+                            pdb_id=protein.pdb_id,
+                            file_name="trajectory.dcd",
+                            method="put_object",
+                            expires_in=int(timeout),
+                        ),
+                    ),
+                    timeout=timeout,
+                    deserialize=True,
                 )
-                for axon, synapse in zip(axons, synapses)
+                for axon, hotkey in zip(axons, hotkeys)
             ]
         )
 
