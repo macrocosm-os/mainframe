@@ -36,9 +36,9 @@ class MinerRegistry:
         self.registry: Dict[int, MinerData] = {}
 
         for miner_uid in miner_uids:
-            self.add_miner_to_registry(miner_uid)
+            self._add_miner_to_registry(miner_uid)
 
-    def add_miner_to_registry(self, miner_uid: int) -> None:
+    def _add_miner_to_registry(self, miner_uid: int) -> None:
         """Adds a miner to the registry with default values."""
         miner_data = MinerData()
         miner_data.tasks = {task: TaskMetrics() for task in self.tasks}
@@ -48,7 +48,7 @@ class MinerRegistry:
     def _get_or_create_miner(self, miner_uid: int) -> MinerData:
         """Gets existing miner or creates new entry if not exists."""
         if miner_uid not in self.registry:
-            self.add_miner_to_registry(miner_uid)
+            self._add_miner_to_registry(miner_uid)
         return self.registry[miner_uid]
 
     def _initialize_miner_logs(self, miner_uid: int) -> None:
@@ -138,14 +138,15 @@ class MinerRegistry:
 
     def reset(self, miner_uid: int) -> None:
         """Resets all metrics for a miner."""
-        self.registry[miner_uid] = MinerData()
-        self.registry[miner_uid].tasks = {task: TaskMetrics() for task in self.tasks}
+        self._add_miner_to_registry(miner_uid)
 
     def get_all_miner_logs(self) -> Dict[int, Dict[str, Any]]:
         """Returns all logs for all miners and resets them."""
         all_miner_logs = {}
 
         for miner_uid, miner_data in self.registry.items():
+            if not miner_data.logs:
+                self._initialize_miner_logs(miner_uid)
             all_miner_logs[miner_uid] = miner_data.logs
 
         return all_miner_logs
