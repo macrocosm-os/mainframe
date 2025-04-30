@@ -21,10 +21,12 @@
     <img src="./assets/mainframe_official.png" alt="mainframe-official">
 </div>
 
+*inspiration from [owl_posting](https://x.com/owl_posting)*
+
 # The Mission
 Mainframe asks a simple question: *could bittensor be used for generalized scientific compute?* We at Macrocosmos believe so. 
 
-Rational simulation-guided design of atomic systems has been a dream of researchers across the chemical sciences for decades. Enabling rapid and performant experimentation to experts would unlock massive potential to accelerate chemical science
+"Rational simulation-guided design of atomic systems has been a dream of researchers across the chemical sciences for decades. Enabling rapid and performant experimentation to experts would unlock massive potential to accelerate chemical science" [Mann et al. 2025](https://arxiv.org/abs/2504.20955)
 
 For decentralized science to succeed, we need:
 1. Industry/Research collaboration
@@ -33,12 +35,12 @@ For decentralized science to succeed, we need:
 ## Our Principles
 - *fast*
 - *accurate*
+- *scalable*
 - *reliable* simulation
 
 ## Our Focus
 - *molecular dynamics*
 - *material propery prediction*
-- *neural network potentials (NNPs)*
 - *model training*
 
 ## Our Goals
@@ -47,7 +49,7 @@ For decentralized science to succeed, we need:
 
 ## Our Accomplishments (last updated April 30th, 2025)
 1. the first desci subnet on bittensor ✅
-1. professional and revenue generatting collaboration with [Rowan Scientific](https://rowansci.com) to build DTF pipelines on sn25 ✅
+1. professional and revenue generating collaboration with [Rowan Scientific](https://rowansci.com) to build DTF pipelines on sn25 ✅
 
 
 # License
