@@ -773,7 +773,7 @@ class SyntheticMDEvaluator(BaseEvaluator):
             # Get median RMSD value
             median_rmsd = np.median(rmsds)
 
-            if median_rmsd > 1:
+            if np.isnan(median_rmsd) or median_rmsd > 1:
                 logger.warning(
                     f"hotkey {self.hotkey_alias} failed trajectory RMSD check for {self.pdb_id}, checkpoint_num: {checkpoint_num}, with median RMSD: {median_rmsd} ... Skipping!"
                 )
