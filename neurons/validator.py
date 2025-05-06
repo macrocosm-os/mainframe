@@ -234,6 +234,11 @@ class Validator(BaseValidatorNeuron):
 
         protein = await Protein.from_job(job=job, config=self.config.protein)
 
+        if protein is None:
+            logger.error(f"Protein is None for {job.pdb_id}")
+            event = {"energies": []}
+            return event
+
         logger.info(f"Running run_step for {protein.pdb_id}...⏳")
         return await self.run_step(
             protein=protein,
