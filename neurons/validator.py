@@ -18,6 +18,7 @@ import numpy as np
 import pandas as pd
 import tenacity
 
+import bittensor as bt
 from async_timeout import timeout
 
 from folding import __spec_version__ as spec_version
@@ -219,6 +220,9 @@ class Validator(BaseValidatorNeuron):
 
         return event
 
+    async def forward(self, synapse: bt.Synapse) -> bt.Synapse:
+        pass
+
     async def forward_md(self, job: Job) -> dict:
         """Carries out a query to the miners to check their progress on a given job (pdb) and updates the job status based on the results.
 
@@ -247,6 +251,9 @@ class Validator(BaseValidatorNeuron):
             job_id=job.job_id,
             job_type=job.job_type,
         )
+
+    async def forward_dft(self, job: Job) -> dict:
+        pass
 
     async def add_job(self, job_event: dict[str, Any], protein: Protein = None) -> bool:
         """Add a job to the job store while also checking to see what uids can be assigned to the job.
@@ -603,6 +610,23 @@ class Validator(BaseValidatorNeuron):
 
             await asyncio.sleep(self.config.neuron.synthetic_job_interval)
 
+    async def md_pipeline(self, job: Job):
+        # Here we straightforwardly query the workers associated with each job and update the jobs accordingly
+        job_event = await self.forward_md(job=job)
+
+        # If we don't have any miners reply to the query, we will make it inactive.
+        if len(job_event["energies"]) == 0:
+            job.active = False
+            self.store.update_gjp_job(
+                job=job,
+                gjp_address=self.config.neuron.gjp_address,
+                keypair=self.wallet.hotkey,
+                job_id=job.job_id,
+            )
+            return
+
+        await self.update_job(job=job)
+
     async def update_jobs(self):
         """
         Updates the jobs in the queue.
@@ -617,22 +641,16 @@ class Validator(BaseValidatorNeuron):
                 for job in self.store.get_queue(
                     ready=True, validator_hotkey=self.wallet.hotkey.ss58_address
                 ).queue:
-                    # Here we straightforwardly query the workers associated with each job and update the jobs accordingly
-                    job_event = await self.forward(job=job)
+                    
+                    #TODO: This will break for now
+                    if job.job_type == "md":
+                        job_event = await self.md_pipeline(job=job)
+                                                
+                        if isinstance(job.event, str):
+                            job.event = eval(job.event)  # if str, convert to dict.
 
-                    # If we don't have any miners reply to the query, we will make it inactive.
-                    if len(job_event["energies"]) == 0:
-                        job.active = False
-                        self.store.update_gjp_job(
-                            job=job,
-                            gjp_address=self.config.neuron.gjp_address,
-                            keypair=self.wallet.hotkey,
-                            job_id=job.job_id,
-                        )
-                        continue
-
-                    if isinstance(job.event, str):
-                        job.event = eval(job.event)  # if str, convert to dict.
+                    elif job.job_type == "dft":
+                        job_event = await self.forward_dft(job=job)
 
                     job.event.update(job_event)
                     job.hotkeys = [
@@ -641,6 +659,7 @@ class Validator(BaseValidatorNeuron):
                     # Determine the status of the job based on the current energy and the previous values (early stopping)
                     # Update the DB with the current status
                     await self.update_job(job=job)
+
                 logger.info(f"step({self.step}) block({self.block})")
 
             except Exception as e:
