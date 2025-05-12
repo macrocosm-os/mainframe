@@ -1,7 +1,7 @@
 import pytest
 
 from folding.utils.openmm_forcefields import FORCEFIELD_REGISTRY
-from folding.validators.hyperparameters import HyperParameters
+from folding.validators.md.hyperparameters import HyperParameters
 
 BOX = ["cubic", "dodecahedron", "octahedron"]
 

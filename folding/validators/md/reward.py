@@ -5,7 +5,7 @@ import numpy as np
 from collections import defaultdict
 from folding.utils.logger import logger
 from folding.utils import constants as c
-from folding.validators.protein import Protein
+from folding.validators.md.protein import Protein
 from folding.base.evaluation import BaseEvaluator
 from folding.protocol import JobSubmissionSynapse
 from folding.registries.miner_registry import MinerRegistry
