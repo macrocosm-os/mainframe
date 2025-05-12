@@ -1,22 +1,24 @@
 # The MIT License (MIT)
 # Copyright © 2024 Macrocosmos
 
-from collections import defaultdict
 import os
 import time
+import pickle
 import asyncio
 import traceback
 
 from datetime import datetime
 from typing import Any, Dict, List
+from collections import defaultdict
 
 import netaddr
 import requests
 import torch
 import numpy as np
 import pandas as pd
-from async_timeout import timeout
 import tenacity
+
+from async_timeout import timeout
 
 from folding import __spec_version__ as spec_version
 
@@ -38,14 +40,13 @@ from folding.utils.s3_utils import (
 
 from folding.protocol import JobSubmissionSynapse
 from folding.utils.ops import get_response_info
-from folding.validators.reward import run_evaluation_validation_pipeline
-from folding.validators.forward import create_new_challenge
-from folding.validators.protein import Protein
+from folding.validators.md.reward import run_evaluation_validation_pipeline
+from folding.validators.md.forward import create_new_challenge
+from folding.validators.md.protein import Protein
 from folding.registries.miner_registry import MinerRegistry
 from folding.organic.api import start_organic_api_in_process
 
 from dotenv import load_dotenv
-import pickle
 
 load_dotenv()
 
@@ -121,7 +122,7 @@ class Validator(BaseValidatorNeuron):
         self._organic_api_pipe = None
         self._organic_api_process = None
 
-    async def run_step(
+    async def run_md_step(
         self,
         protein: Protein,
         timeout: float,
@@ -218,7 +219,7 @@ class Validator(BaseValidatorNeuron):
 
         return event
 
-    async def forward(self, job: Job) -> dict:
+    async def forward_md(self, job: Job) -> dict:
         """Carries out a query to the miners to check their progress on a given job (pdb) and updates the job status based on the results.
 
         Validator forward pass. Consists of:
@@ -239,8 +240,8 @@ class Validator(BaseValidatorNeuron):
             event = {"energies": []}
             return event
 
-        logger.info(f"Running run_step for {protein.pdb_id}...⏳")
-        return await self.run_step(
+        logger.info(f"Running run_md_step for {protein.pdb_id}...⏳")
+        return await self.run_md_step(
             protein=protein,
             timeout=self.config.neuron.timeout,
             job_id=job.job_id,
