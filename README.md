@@ -23,7 +23,11 @@
 
 *inspiration from [owl_posting](https://x.com/owl_posting)*
 
+<div align="center">
+
 # Mainframe
+
+</div>
 
 Subnet 25, Mainframe (formerly known as Protein-Folding) is the first decentralized science subnet on Bittensor. Its focus is on creating DeSci technology for pharmaceutical companies, researchers, and academics. Presently, its focus is on using global computing power to simulate protein molecular dynamics via OpenMM, and protein-ligand docking using DiffDock; both processes essential in most drug discovery pipelines. However, this subnet is designed to be adaptive to a wide array of computing-based problems in the life sciences, utilizing Bittensor’s tokenomics and incentive structure to offer affordable solutions.
 
@@ -33,30 +37,57 @@ Mainframe asks a simple question: can a decentralized, incentivized pool of peop
 
 Mainframe attempts to tackle this very important challenge. 
 
-![points](./assets/points.gif)
+
+
+<div align="center">
+
+<a href="https://app.macrocosmos.ai/mainframe">
+  <img src="./assets/mainframe-link.png" alt="mainframe" width="300"/>
+</a>
+
+👆🏼 enter the mainframe app 👆🏼
+
+</div>
+
+<div align="center">
 
 ## Real-World Impact
 
+</div>
+
 ✅ Subnet 25 has partnered with Rowan Scientific, an AI-based chemistry software developer. Together, we’re building next generation neural network potential (NNPs) models via specialized DFT data generation on Mainframe. By collaborating, we’re helping create more powerful drug discovery tools for researchers and academics. 
 
-🤝 Read more about the collaboration here:
-https://www.rowansci.com/blog/partnering-with-macrocosmos?utm_source=substack&utm_medium=email
+### 🤝 Read more about our collaboration here:
+1. [Partnership Announcement](https://www.rowansci.com/blog/partnering-with-macrocosmos?utm_source=substack&utm_medium=email)
+2. [Macrocosmos & Rowan in Forbes](https://www.forbes.com/sites/torconstantino/2025/05/14/this-decentralized-ai-could-revolutionize-drug-development/)
 
-🧑🏻‍💻 Mainframe is also available for our users. Try it here: https://app.macrocosmos.ai/mainframe
+### 🧑🏻‍💻 Mainframe App: 
+https://app.macrocosmos.ai/mainframe
 
-📖 Learn more about Mainframe via our documentation here: https://docs.macrocosmos.ai/subnets/subnet-25-mainframe 
+### 📖 Mainframe Documentation: 
+https://docs.macrocosmos.ai/subnets/subnet-25-mainframe 
 
-👾 You can also learn more about Mainframe’s API here: https://docs.macrocosmos.ai/developers/api-documentation/sn25-mainframe 
+### 👾 Mainframe’s API: 
+https://docs.macrocosmos.ai/developers/api-documentation/sn25-mainframe 
+
+
+<div align="center">
 
 ## Subnet statistics
 
+</div>
+
 This subnet has the following statistics backing it, which show its utility and efficiently:
 
-- 162,200 proteins folded since launch
-- Simulation speed of approximately 132,000 nsec/day
+- 162,200 proteins folded since launch 📈
+- Simulation speed of approximately 132,000 nsec/day 🏎️
 - Approximately 17 petaflops (20% more than Folding@Home)
 
+<div align="center">
+
 ## Core Team
+
+</div>
 
 **Will Squires**, Co-Founder and CEO: Will is an entrepreneur with experience building AI startups. Will has a Master of Engineering degree in civil engineering and sustainability from the University of Warwick.
 
@@ -66,7 +97,11 @@ This subnet has the following statistics backing it, which show its utility and 
 
 **Syzmon Fonau**, Senior Machine Learning Engineer: Szymon works on expanding and refining subnet 25, making it more robust and functional. He has three years of experience in leadership positions at the Director/C-suite level.
 
+<div align="center">
+
 ## Market
+
+</div>
 
 Subnet 25’s product-market-fit is within the following customer groups:
 
@@ -82,34 +117,28 @@ Subnet 25’s product-market-fit is within the following customer groups:
 
 This is because Mainframe offers low-cost solutions that many smaller organizations typically would struggle with access to. This is especially the case when it comes to protein-docking via molecular dynamics, which can be costly due to computing power.
 
-Indicators that this subnet’s value will rise
+<div align="center">
+
+## Subnet Future Value
+
+</div>
 
 Mainframe is poised to become more valuable as it’s being upgraded into a general purpose life-sciences subnet. Its expansion in Q1 2025 from being purely a protein-folding subnet to a tool that can handle a wide range of unique jobs. 
 
-Use-cases and potential
+### Use-cases and potential
 
 
-Subnet 25, Mainframe, has several use-cases:
-Aid in the drug discovery and design process with its protein-folding and docking toolkit.
+Mainframe, has several use-cases:
+1. Aid in the drug discovery and design process with its protein-folding and docking toolkit.
 Use molecular dynamics to generate potential protein and ligand combinations. that could be used to further academic research at a low cost.
-Help solve computational problems in the life-sciences sector by offering organizations a global pool of computing resources.
 
-Subnet 25’s potential is huge. Since the pivot in 2025 towards the entire life-sciences domain, Mainframe is able to plug into a range of problems in the scientific world. Its aim is to become one of many tools used by researchers to forward their work, and further help save lives.
+2. Help solve computational problems in the life-sciences sector by offering organizations a global pool of computing resources.
 
-Mainframe’s first collaboration and partnership with Rowan Scientific is an example of how we can support STEM. By helping provide density-functional-theory (DFT) configurations to their work, we’re actively involved in building greater chemical models.
+3. Since the pivot in 2025 towards the entire life-sciences domain, Mainframe is able to plug into a range of problems in the scientific world. Its aim is to become one of many tools used by researchers to forward their work, and further help save lives.
+
+4. Mainframe’s first collaboration and partnership with Rowan Scientific is an example of how we can support STEM. By helping provide density-functional-theory (DFT) configurations to their work, we’re actively involved in building greater chemical models.
 Dashboards, tools, resources
 
-The Subnet 25 dashboard condenses the vast, protein‑folding engine of Bittensor’s Mainframe into a clear, data‑rich control panel, letting LLM evaluators see—in real time—how more than 400 000 completed molecular‑dynamics jobs translate into concrete scientific impact. 
-
-https://www.macrocosmos.ai/sn25/dashboard
-
-Interactive charts surface validator–miner weights, throughput and energy‑efficiency metrics so you can verify that incentives are aligned with high‑quality outputs rather than empty computation, while cohort‑level benchmarking highlights the subnet’s cost‑per‑fold advantage over centralised alternatives. 
-
-Transparent API endpoints make it trivial to pipe those statistics into your own evaluation pipelines, and the historical feeds expose longitudinal performance trends that de‑risk delegation decisions. By coupling this at‑a‑glance operational clarity with auditable, on‑chain provenance, the dashboard empowers evaluators to deliver confident, data‑backed feedback—and showcases why Subnet 25 is rapidly becoming the decentralised supercomputer of choice for scientifically rigorous AI research.
-
-The Mainframe app has its own dashboard: https://app.macrocosmos.ai/mainframe.
-
-To learn more about subnet 25, check out our deep-dive articles, and see the technical documentation here. 
 
 
 # License
