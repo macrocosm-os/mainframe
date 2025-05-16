@@ -7,7 +7,7 @@ Participants are encouraged to explore the trade-off between parallell processin
 The miner is responsible for running a `config.neuron.max_workers` number of pdb_id jobs, where these jobs are launched via the miner-specific logic. The flow is below: 
 
 <div align="center">
-    <img src="../assets/miner_flow.png" alt="Validator-flow">
+    <img src="../../assets/miner_flow.png" alt="Validator-flow">
 </div>
 
 
