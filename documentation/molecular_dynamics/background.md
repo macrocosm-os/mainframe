@@ -20,11 +20,11 @@ Protein folding is a textbook example of this kind of asymmetry; the molecular d
 While the process of simulation is exceedingly compute-intensive, the evaluation process is actually straightforward. **The reward given to the miners is based on the ‘energy’ of their protein configuration (or shape)**. The energy value compactly represents the overall quality of their result, and this value is precisely what is decreased over the course of a molecular dynamics simulation. The energy directly corresponds to the configuration of the structure, and can be computed in closed-form. The gif below illustrates the energy minimization over a short simulation procedure.
 
 <div align="center">
-    <img src="../assets/8emf_pdb_loss.gif" alt="Alt Folded-protein" width="500" height="350">
+    <img src="../../assets/8emf_pdb_loss.gif" alt="Alt Folded-protein" width="500" height="350">
 </div>
 
 When simulation reach convergence (ΔE/t < threshold), they obtain the structural form of proteins as they are observed in real physical environments, and this form gives rise to their biological function. Thus, the miners provide utility by preparing ready-for-study proteins on demand. An example of such a protein is shown below. 
 
 <div align="center">
-    <img src="../assets/8emf_pdb_protein.gif" alt="Alt Folded-protein" width="600" height="500">
+    <img src="../../assets/8emf_pdb_protein.gif" alt="Alt Folded-protein" width="600" height="500">
 </div>

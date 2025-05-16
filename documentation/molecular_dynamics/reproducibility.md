@@ -13,17 +13,17 @@ In order to get as close as possible to stability, we will require **ALL** valid
 
 #### Same hardware
 We ran the same simulation on 2 different machines with the same exact hardware. The results were identical. This is the ideal scenario and what we are aiming for:
-![alt text](../assets/perfect_reproducibility_same_hardware.png)
+![alt text](../../assets/perfect_reproducibility_same_hardware.png)
 
 As you can see the graph shows that all points are perfectly aligned. This is what we are aiming for. This can be shown more clearly by calculating the percentage difference between the two simulations at each step. The percentage difference is 0% for all points:
-![alt text](../assets/perfect_reproducibility_same_hardware_percent_diff.png)
+![alt text](../../assets/perfect_reproducibility_same_hardware_percent_diff.png)
 
 #### Different hardware
 We ran the same simulation on 2 different machines with different GPUs. The simulations should still look nearly identical as shown below: 
 ![alt text](../assets/perfect_reproducibility_different_hardware.png)
 
 Looking at only this plot it seems like the simulations are identical. However, when we calculate the percentage difference between the two simulations at each step, we see that the percentage difference is not 0% for all points:
-![alt text](../assets/perfect_reproducibility_different_hardware_percent_diff.png)
+![alt text](../../assets/perfect_reproducibility_different_hardware_percent_diff.png)
 
 As you can see, the percentage difference is not 0% for all points. This is not ideal but it is still acceptable. We will allow for some variation in the simulations but if the percentage difference is too high, we will not accept the submission.
 
@@ -32,17 +32,17 @@ We observed that in some cases the simulations were not reproducible at all. We 
 
 ### Type 1: Small deviations
 In this case, the simulations are not reproducible but the percentage difference is not too high. These type of simulations are not acceptable and we will be investigating what causes them. Here's an example of a simulation that has small deviations:
-![alt text](../assets/bad_reproducibility_small_deviation.png)
+![alt text](../../assets/bad_reproducibility_small_deviation.png)
 
 These type of simulations usually cap at around 5% difference per step:
-![alt text](../assets/bad_reproducibility_small_deviation_percent_diff.png)
+![alt text](../../assets/bad_reproducibility_small_deviation_percent_diff.png)
 
 ### Type 2: Large deviations
 In this case, the simulations are not reproducible and the percentage difference is very high. These type of simulations are not acceptable and we will be investigating what causes them. Here's an example of a simulation that has large deviations:
-![alt text](../assets/bad_reproducibility_big_deviation.png)
+![alt text](../../assets/bad_reproducibility_big_deviation.png)
 
 Percentage difference:
-![alt text](../assets/bad_reproducibility_big_deviation_percentage_diff.png)
+![alt text](../../assets/bad_reproducibility_big_deviation_percentage_diff.png)
 
 Such major deviations are unusual and indicate the presence of a major underlying issue. 
 
