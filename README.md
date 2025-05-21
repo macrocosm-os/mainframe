@@ -70,6 +70,9 @@ https://docs.macrocosmos.ai/subnets/subnet-25-mainframe
 ### 👾 Mainframe’s API: 
 https://docs.macrocosmos.ai/developers/api-documentation/sn25-mainframe 
 
+### 🧮 Mainframe's Protein Folding Dashboard: 
+https://www.macrocosmos.ai/sn25/dashboard
+
 
 <div align="center">
 
@@ -127,7 +130,6 @@ Mainframe is poised to become more valuable as it’s being upgraded into a gene
 
 ### Use-cases and potential
 
-
 Mainframe, has several use-cases:
 1. Aid in the drug discovery and design process with its protein-folding and docking toolkit.
 Use molecular dynamics to generate potential protein and ligand combinations. that could be used to further academic research at a low cost.
@@ -139,6 +141,31 @@ Use molecular dynamics to generate potential protein and ligand combinations. th
 4. Mainframe’s first collaboration and partnership with Rowan Scientific is an example of how we can support STEM. By helping provide density-functional-theory (DFT) configurations to their work, we’re actively involved in building greater chemical models.
 Dashboards, tools, resources
 
+<div align="center">
+
+## Mainframe Incentive Architecture
+
+</div>
+
+As Mainframe is meant to be a collection of different scientific computation tasks happening in parallel, the result is that there are a collection of incentive mechanisms that must be managed. The sections below outline our current tasks: 
+
+### Molecular Dynamics
+
+Physical systems such as proteins tend to minimize their energy and so this provides a succinct, exploit-resistant and highly sensitive measure of quality. For this reason, miners compete to provide protein configurations that coincide with the lowest energy (analogous to loss). The benefit is twofold; the metric the network is optimizing for is highly aligned with the desired outcome (biologically stable structures) and it is transparent and deterministic (both miners and validators can quickly calculate the energy of a configuration).
+
+Miners are currently tasked with finding the lowest free energy solution of the specified configuration. This challenge is placed within the Global Job Pool (GJP) and miners must work on the challenge and post their solutions to S3 for validation. Therefore, all miners have access to all challenges, and thus compete on them accordingly. 
+
+The top-K miners (currently, K = 5) are ranked, where 80% of the reward for that challenge is given to the top miner in the batch, and the remaining 20% is distributed to the (K-1) miners. Therefore, miners not in the top-K set get *no* rewards. 
+
+**Maintaining opportunity:**
+-  The miners are oversubscribed to jobs by design, which means there is an effectively unbounded opportunity for those that can handle the enormous computational workload.
+
+**Ensuring innovation:** 
+- Each miner uses a separate random seed for their simulations, which ensures that each simulation suitably explores the folding space and utilizes the parallelism opportunity of batching jobs. On job evaluation, if miners are submitting identical results, we enforce that their reward is zero, which continues to incentivize unique solutions.
+
+### Density Functional Theory (DFT)
+
+Coming soon...
 
 
 # License
