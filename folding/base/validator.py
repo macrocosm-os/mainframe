@@ -26,8 +26,8 @@ import threading
 import numpy as np
 import bittensor as bt
 from pathlib import Path
+from datetime import datetime
 from folding.utils.logger import logger
-
 from typing import List, Optional
 
 from folding.mock import MockDendrite
@@ -254,12 +254,19 @@ class BaseValidatorNeuron(BaseNeuron):
         """Saves the state of the validator to a file."""
         logger.info("Saving validator state.")
 
+        last_time_checked = (
+            self.last_time_checked
+            if hasattr(self, "last_time_checked")
+            else datetime.now()
+        )
+
         # Save the state of the validator to file.
         torch.save(
             {
                 "step": self.step,
                 "scores": self.scores,
                 "hotkeys": self.hotkeys,
+                "last_time_checked": last_time_checked,
             },
             self.config.neuron.full_path + "/state.pt",
         )
@@ -275,6 +282,11 @@ class BaseValidatorNeuron(BaseNeuron):
             self.step = state["step"]
             self.scores = state["scores"]
             self.hotkeys = state["hotkeys"]
+            self.last_time_checked = (
+                state["last_time_checked"]
+                if "last_time_checked" in state
+                else datetime.now()
+            )
             logger.info("Loaded previously saved validator state information.")
 
         except FileNotFoundError:
