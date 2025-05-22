@@ -76,7 +76,7 @@ https://www.macrocosmos.ai/sn25/dashboard
 
 <div align="center">
 
-## Subnet statistics
+# Subnet statistics
 
 </div>
 
@@ -88,7 +88,7 @@ This subnet has the following statistics backing it, which show its utility and 
 
 <div align="center">
 
-## Core Team
+# Core Team
 
 </div>
 
@@ -102,7 +102,7 @@ This subnet has the following statistics backing it, which show its utility and 
 
 <div align="center">
 
-## Market
+# Market
 
 </div>
 
@@ -122,7 +122,43 @@ This is because Mainframe offers low-cost solutions that many smaller organizati
 
 <div align="center">
 
-## Subnet Future Value
+# Mainframe Incentive Architecture
+
+</div>
+
+As Mainframe is meant to be a collection of different scientific computation tasks happening in parallel, the result is that there are a collection of incentive mechanisms that must be managed. The sections below outline our current tasks: 
+
+<div align="center">
+
+### Molecular Dynamics 🧬
+---
+
+</div>
+
+Physical systems such as proteins tend to minimize their energy and so this provides a succinct, exploit-resistant and highly sensitive measure of quality. For this reason, miners compete to provide protein configurations that coincide with the lowest energy (analogous to loss). The benefit is twofold; the metric the network is optimizing for is highly aligned with the desired outcome (biologically stable structures) and it is transparent and deterministic (both miners and validators can quickly calculate the energy of a configuration).
+
+Miners are currently tasked with finding the lowest free energy solution of the specified configuration. This challenge is placed within the Global Job Pool (GJP) and miners must work on the challenge and post their solutions to S3 for validation. Therefore, all miners have access to all challenges, and thus compete on them accordingly. 
+
+The top-K miners (currently, K = 5) are ranked, where 80% of the reward for that challenge is given to the top miner in the batch, and the remaining 20% is distributed to the (K-1) miners. Therefore, miners not in the top-K set get *no* rewards. 
+
+**Maintaining opportunity:**
+-  The miners are oversubscribed to jobs by design, which means there is an effectively unbounded opportunity for those that can handle the enormous computational workload.
+
+**Ensuring innovation:** 
+- Each miner uses a separate random seed for their simulations, which ensures that each simulation suitably explores the folding space and utilizes the parallelism opportunity of batching jobs. On job evaluation, if miners are submitting identical results, we enforce that their reward is zero, which continues to incentivize unique solutions.
+
+<div align="center">
+
+### Density Functional Theory (DFT) ⚛️
+---
+
+</div>
+
+Coming soon...
+
+<div align="center">
+
+# Subnet Future Value
 
 </div>
 
@@ -143,30 +179,15 @@ Dashboards, tools, resources
 
 <div align="center">
 
-## Mainframe Incentive Architecture
+# Dashboards, Tools, and Additional Resources
 
 </div>
 
-As Mainframe is meant to be a collection of different scientific computation tasks happening in parallel, the result is that there are a collection of incentive mechanisms that must be managed. The sections below outline our current tasks: 
+### [Molecular Dynamics Dashboard](https://www.macrocosmos.ai/sn25/dashboard)
+Interactive charts surface validator–miner weights, throughput and energy‑efficiency metrics so you can verify that incentives are aligned with high‑quality outputs rather than empty computation, while cohort‑level benchmarking highlights the subnet’s cost‑per‑fold advantage over centralised alternatives. 
 
-### Molecular Dynamics
-
-Physical systems such as proteins tend to minimize their energy and so this provides a succinct, exploit-resistant and highly sensitive measure of quality. For this reason, miners compete to provide protein configurations that coincide with the lowest energy (analogous to loss). The benefit is twofold; the metric the network is optimizing for is highly aligned with the desired outcome (biologically stable structures) and it is transparent and deterministic (both miners and validators can quickly calculate the energy of a configuration).
-
-Miners are currently tasked with finding the lowest free energy solution of the specified configuration. This challenge is placed within the Global Job Pool (GJP) and miners must work on the challenge and post their solutions to S3 for validation. Therefore, all miners have access to all challenges, and thus compete on them accordingly. 
-
-The top-K miners (currently, K = 5) are ranked, where 80% of the reward for that challenge is given to the top miner in the batch, and the remaining 20% is distributed to the (K-1) miners. Therefore, miners not in the top-K set get *no* rewards. 
-
-**Maintaining opportunity:**
--  The miners are oversubscribed to jobs by design, which means there is an effectively unbounded opportunity for those that can handle the enormous computational workload.
-
-**Ensuring innovation:** 
-- Each miner uses a separate random seed for their simulations, which ensures that each simulation suitably explores the folding space and utilizes the parallelism opportunity of batching jobs. On job evaluation, if miners are submitting identical results, we enforce that their reward is zero, which continues to incentivize unique solutions.
-
-### Density Functional Theory (DFT)
-
-Coming soon...
-
+### [Macrocosmos SDK](https://github.com/macrocosm-os/macrocosmos-py)
+Macrocosmos has a public SDK that provides you with API endpoints for using all of our products! 
 
 # License
 
