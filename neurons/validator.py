@@ -101,7 +101,12 @@ class Validator(BaseValidatorNeuron):
         self.validator_hotkey_reference = self.wallet.hotkey.ss58_address[:8]
 
         # The last time that we checked the global job pool.
-        self.last_time_checked = datetime.now()
+        self.last_time_checked = (
+            self.last_time_checked
+            if hasattr(self, "last_time_checked")
+            else datetime.now()
+        )
+
         self.last_time_created_jobs = datetime.now()
 
         if not self.config.s3.off:
@@ -658,6 +663,7 @@ class Validator(BaseValidatorNeuron):
         inactive_jobs_queue = self.store.get_inactive_queue(
             last_time_checked=self.last_time_checked.strftime("%Y-%m-%dT%H:%M:%S")
         )
+
         self.last_time_checked = datetime.now()
 
         if inactive_jobs_queue.qsize() == 0:
