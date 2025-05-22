@@ -5,12 +5,12 @@ import random
 import sqlite3
 import requests
 from queue import Queue
-from typing import Dict, List
+from typing import List, Annotated, Union
+from pydantic import constr
 from dotenv import load_dotenv
 
 from datetime import datetime
 
-import numpy as np
 import pandas as pd
 
 from atom.epistula.epistula import Epistula
@@ -44,6 +44,7 @@ class SQLiteJobStore:
             return None
 
         data = dict(row)
+
         # Convert stored JSON strings back to Python objects
         data["hotkeys"] = json.loads(data["hotkeys"])
         data["system_config"] = (
@@ -68,7 +69,7 @@ class SQLiteJobStore:
         # Convert boolean
         data["active"] = bool(data["active"])
 
-        return Job(**data)
+        return MDJob(**data) if data["job_type"] == "md" else DFTJob(**data)
 
     def get_queue(self, validator_hotkey: str, ready=True) -> Queue:
         """
@@ -90,6 +91,7 @@ class SQLiteJobStore:
             response = requests.get(
                 f"http://{local_db_addr}/db/query",
                 params={"q": query, "level": "strong"},
+                timeout=10,
             )
         else:
             response = requests.get(
@@ -98,6 +100,7 @@ class SQLiteJobStore:
                     "q": f"SELECT * FROM {self.table_name} WHERE active = 1 AND validator_hotkey = '{validator_hotkey}'",
                     "level": "strong",
                 },
+                timeout=10,
             )
 
         if response.status_code != 200:
@@ -238,6 +241,49 @@ class SQLiteJobStore:
             df = pd.read_sql_query(f"SELECT * FROM {self.table_name}", conn)
         return f"{self.__class__.__name__}\n{df.__repr__()}"
 
+    def _setup_and_get_job(self, event: dict, kwargs: dict) -> Union["MDJob", "DFTJob"]:
+        if event["job_type"] == "md":
+            job = MDJob(
+                pdb_id=event["pdb_id"],
+                system_config=SystemConfig(
+                    ff=event["ff"],
+                    box=event["box"],
+                    water=event["water"],
+                    system_kwargs=SystemKwargs(**event["system_kwargs"]),
+                ),
+                hotkeys=[""],
+                job_type=event["job_type"],
+                created_at=pd.Timestamp.now().floor("s"),
+                updated_at=pd.Timestamp.now().floor("s"),
+                epsilon=event["epsilon"],
+                s3_links=event["s3_links"],
+                priority=event.get("priority", 1),
+                update_interval=event.get(
+                    "time_to_live", random.randint(7200, 14400)
+                ),  # between 2 hours and 4 hours in seconds
+                max_time_no_improvement=event.get("max_time_no_improvement", 1),
+                is_organic=event.get("is_organic", False),
+                job_id=event.get("job_id", None),
+                active=event.get("active", True),
+                event=event,
+                **kwargs,
+            )
+
+        elif event["job_type"] == "dft":
+            job = DFTJob(
+                system=event["system"],
+                geometry=event["geometry"],
+                created_at=pd.Timestamp.now().floor("s"),
+                updated_at=pd.Timestamp.now().floor("s"),
+                **event,
+                **kwargs,
+            )
+        
+        else:
+            raise ValueError(f"Invalid job type: {event['job_type']}")
+
+        return job
+
     def upload_job(
         self,
         event: dict,
@@ -260,32 +306,8 @@ class SQLiteJobStore:
         Raises:
             ValueError: If the job upload fails.
         """
-        job = Job(
-            pdb_id=event["pdb_id"],
-            system_config=SystemConfig(
-                ff=event["ff"],
-                box=event["box"],
-                water=event["water"],
-                system_kwargs=SystemKwargs(**event["system_kwargs"]),
-            ),
-            hotkeys=[""],
-            job_type=event["job_type"],
-            created_at=pd.Timestamp.now().floor("s"),
-            updated_at=pd.Timestamp.now().floor("s"),
-            epsilon=event["epsilon"],
-            s3_links=event["s3_links"],
-            priority=event.get("priority", 1),
-            update_interval=event.get(
-                "time_to_live", random.randint(7200, 14400)
-            ),  # between 2 hours and 4 hours in seconds
-            max_time_no_improvement=event.get("max_time_no_improvement", 1),
-            is_organic=event.get("is_organic", False),
-            job_id=event.get("job_id", None),
-            active=event.get("active", True),
-            event=event,
-            **kwargs,
-        )
 
+        job: Union["MDJob", "DFTJob"] = self._setup_and_get_job(event=event, kwargs=kwargs)
         body = job.model_dump()
 
         body_bytes = self.epistula.create_message_body(body)
@@ -350,8 +372,36 @@ class SQLiteJobStore:
         return (last_log_leader - last_log_read) != 0
 
 
-class Job(JobBase):
+class MDJob(JobBase):
+    """Job class for storing molecular dynamics job information."""
+    
+    # MD-specific parameters
+    pdb_id: Annotated[str, constr(min_length=4, max_length=10)]
+    
+    # MD-specific methods
+    async def update(self, loss: float, hotkey: str):
+        """Updates the status of a job in the database. If the loss improves, the best loss, hotkey and hashes are updated."""
+        self.active = False
+        self.best_loss = loss
+        self.best_loss_at = pd.Timestamp.now().floor("s")
+        self.best_hotkey = hotkey
+        self.updated_at = datetime.now()
+        
+    def get_simulation_config(self) -> dict:
+        """Returns the simulation configuration for this MD job."""
+        return {
+            "ff": self.system_config.ff,
+            "box": self.system_config.box,
+            "water": self.system_config.water,
+            "system_kwargs": self.system_config.system_kwargs.model_dump(),
+            "epsilon": self.epsilon
+        }
+
+class DFTJob(JobBase):
     """Job class for storing job information."""
+
+    system: str
+    geometry: str # in the form of f"{charge} {multiplicity}\n{body}"
 
     async def update(self, loss: float, hotkey: str):
         """Updates the status of a job in the database. If the loss improves, the best loss, hotkey and hashes are updated."""

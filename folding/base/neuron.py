@@ -142,7 +142,10 @@ class BaseNeuron(ABC):
         write_pkl(self.wandb_ids, f"{self.config.neuron.full_path}/wandb_ids.pkl", "wb")
 
     @abstractmethod
-    async def forward(self, synapse: bt.Synapse) -> bt.Synapse:
+    async def forward_md(self, synapse: bt.Synapse) -> bt.Synapse:
+        ...
+
+    async def forward_dft(self, synapse: bt.Synapse) -> bt.Synapse:
         ...
 
     def sync(self):

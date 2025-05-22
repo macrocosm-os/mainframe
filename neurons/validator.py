@@ -1,22 +1,25 @@
 # The MIT License (MIT)
 # Copyright © 2024 Macrocosmos
 
-from collections import defaultdict
 import os
 import time
+import pickle
 import asyncio
 import traceback
 
 from datetime import datetime
 from typing import Any, Dict, List
+from collections import defaultdict
 
 import netaddr
 import requests
 import torch
 import numpy as np
 import pandas as pd
-from async_timeout import timeout
 import tenacity
+
+import bittensor as bt
+from async_timeout import timeout
 
 from folding import __spec_version__ as spec_version
 
@@ -38,14 +41,13 @@ from folding.utils.s3_utils import (
 
 from folding.protocol import JobSubmissionSynapse
 from folding.utils.ops import get_response_info
-from folding.validators.reward import run_evaluation_validation_pipeline
-from folding.validators.forward import create_new_challenge
-from folding.validators.protein import Protein
+from folding.validators.md.reward import run_evaluation_validation_pipeline
+from folding.validators.md.forward import create_new_challenge
+from folding.validators.md.protein import Protein
 from folding.registries.miner_registry import MinerRegistry
 from folding.organic.api import start_organic_api_in_process
 
 from dotenv import load_dotenv
-import pickle
 
 load_dotenv()
 
@@ -126,7 +128,7 @@ class Validator(BaseValidatorNeuron):
         self._organic_api_pipe = None
         self._organic_api_process = None
 
-    async def run_step(
+    async def run_md_step(
         self,
         protein: Protein,
         timeout: float,
@@ -223,7 +225,10 @@ class Validator(BaseValidatorNeuron):
 
         return event
 
-    async def forward(self, job: Job) -> dict:
+    async def forward(self, synapse: bt.Synapse) -> bt.Synapse:
+        pass
+
+    async def forward_md(self, job: Job) -> dict:
         """Carries out a query to the miners to check their progress on a given job (pdb) and updates the job status based on the results.
 
         Validator forward pass. Consists of:
@@ -244,15 +249,95 @@ class Validator(BaseValidatorNeuron):
             event = {"energies": []}
             return event
 
-        logger.info(f"Running run_step for {protein.pdb_id}...⏳")
-        return await self.run_step(
+        logger.info(f"Running run_md_step for {protein.pdb_id}...⏳")
+        return await self.run_md_step(
             protein=protein,
             timeout=self.config.neuron.timeout,
             job_id=job.job_id,
             job_type=job.job_type,
         )
 
-    async def add_job(self, job_event: dict[str, Any], protein: Protein = None) -> bool:
+    async def forward_dft(self, job: Job) -> dict:
+        pass
+
+    async def setup_organic_md_job(self, job_event: dict[str, Any]) -> bool:
+        """
+        Setup an organic MD job. 
+
+        Args:
+            job_event (dict[str, Any]): parameters that are needed to make the job.
+        """
+        self.config.protein.input_source = job_event["source"]
+        protein = Protein(**job_event, config=self.config.protein)
+
+        try:
+            job_event["pdb_id"] = job_event["pdb_id"]
+            job_event["job_type"] = "OrganicMD"
+            job_event["pdb_complexity"] = [dict(protein.pdb_complexity)]
+            job_event["init_energy"] = protein.init_energy
+            job_event["epsilon"] = protein.epsilon
+            job_event["s3_links"] = {
+                "testing": "testing"
+            }  # overwritten below if s3 logging is on.
+            async with timeout(300):
+                logger.info(
+                    f"setup_simulation for organic query: {job_event['pdb_id']}"
+                )
+                await protein.setup_simulation()
+                logger.success(
+                    f"✅✅ organic {job_event['pdb_id']} simulation ran successfully! ✅✅"
+                )
+
+            if protein.init_energy > 0:
+                logger.error(
+                    f"Initial energy is positive: {protein.init_energy}. Simulation failed."
+                )
+                job_event["active"] = False
+                job_event["failed"] = True
+
+            if not self.config.s3.off:
+                try:
+                    logger.info(f"Uploading to {self.handler.config.bucket_name}")
+                    files_to_upload = {
+                        "pdb": protein.pdb_location,
+                        "cpt": os.path.join(
+                            protein.validator_directory, protein.simulation_cpt
+                        ),
+                    }
+
+                    location = os.path.join(
+                        "inputs",
+                        str(spec_version),
+                        job_event["pdb_id"],
+                        self.validator_hotkey_reference,
+                        datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
+                    )
+                    s3_links = {}
+                    for file_type, file_path in files_to_upload.items():
+                        key = self.handler.put(
+                            file_path=file_path,
+                            location=location,
+                            public=True,
+                        )
+                        s3_links[file_type] = os.path.join(
+                            self.handler.output_url,
+                            key,
+                        )
+
+                    job_event["s3_links"] = s3_links
+                    logger.success("✅✅ Simulation ran successfully! ✅✅")
+                except Exception as e:
+                    logger.error(f"Error in uploading to S3: {e}")
+                    logger.error("❌❌ Simulation failed! ❌❌")
+                    job_event["active"] = False
+                    job_event["failed"] = True
+
+        except Exception as e:
+            job_event["active"] = False
+            job_event["failed"] = True
+            logger.error(f"Error in setting up organic query: {e}")
+
+    async def add_job(self, job_event: dict[str, Any]) -> bool:
         """Add a job to the job store while also checking to see what uids can be assigned to the job.
         If uids are not provided, then the function will sample random uids from the network.
 
@@ -265,77 +350,12 @@ class Validator(BaseValidatorNeuron):
 
         # If the job is organic, we still need to run the setup simulation to create the files needed for the job.
         if job_event.get("is_organic"):
-            self.config.protein.input_source = job_event["source"]
-            protein = Protein(**job_event, config=self.config.protein)
 
-            try:
-                job_event["pdb_id"] = job_event["pdb_id"]
-                job_event["job_type"] = "OrganicMD"
-                job_event["pdb_complexity"] = [dict(protein.pdb_complexity)]
-                job_event["init_energy"] = protein.init_energy
-                job_event["epsilon"] = protein.epsilon
-                job_event["s3_links"] = {
-                    "testing": "testing"
-                }  # overwritten below if s3 logging is on.
-                async with timeout(300):
-                    logger.info(
-                        f"setup_simulation for organic query: {job_event['pdb_id']}"
-                    )
-                    await protein.setup_simulation()
-                    logger.success(
-                        f"✅✅ organic {job_event['pdb_id']} simulation ran successfully! ✅✅"
-                    )
+            #TODO: this is quite an ugly implementation and we need a cleaner solution, but this is fine for now. 
+            if job_event["job_type"] == "md":
+                job_event = await self.setup_organic_md_job(job_event=job_event)
+                logger.info(f"Inserting job: {job_event['pdb_id']}")
 
-                if protein.init_energy > 0:
-                    logger.error(
-                        f"Initial energy is positive: {protein.init_energy}. Simulation failed."
-                    )
-                    job_event["active"] = False
-                    job_event["failed"] = True
-
-                if not self.config.s3.off:
-                    try:
-                        logger.info(f"Uploading to {self.handler.config.bucket_name}")
-                        files_to_upload = {
-                            "pdb": protein.pdb_location,
-                            "cpt": os.path.join(
-                                protein.validator_directory, protein.simulation_cpt
-                            ),
-                        }
-
-                        location = os.path.join(
-                            "inputs",
-                            str(spec_version),
-                            job_event["pdb_id"],
-                            self.validator_hotkey_reference,
-                            datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
-                        )
-                        s3_links = {}
-                        for file_type, file_path in files_to_upload.items():
-                            key = self.handler.put(
-                                file_path=file_path,
-                                location=location,
-                                public=True,
-                            )
-                            s3_links[file_type] = os.path.join(
-                                self.handler.output_url,
-                                key,
-                            )
-
-                        job_event["s3_links"] = s3_links
-                        logger.success("✅✅ Simulation ran successfully! ✅✅")
-                    except Exception as e:
-                        logger.error(f"Error in uploading to S3: {e}")
-                        logger.error("❌❌ Simulation failed! ❌❌")
-                        job_event["active"] = False
-                        job_event["failed"] = True
-
-            except Exception as e:
-                job_event["active"] = False
-                job_event["failed"] = True
-                logger.error(f"Error in setting up organic query: {e}")
-
-        logger.info(f"Inserting job: {job_event['pdb_id']}")
         try:
             job = self.store.upload_job(
                 event=job_event,
@@ -360,7 +380,7 @@ class Validator(BaseValidatorNeuron):
 
             return False
 
-    async def add_k_synthetic_jobs(self, k: int):
+    async def add_k_synthetic_md_jobs(self, k: int):
         """Creates new synthetic jobs and assigns them to available workers. Updates DB with new records.
         Each "job" is an individual protein folding challenge that is distributed to the miners.
 
@@ -607,6 +627,23 @@ class Validator(BaseValidatorNeuron):
 
             await asyncio.sleep(self.config.neuron.synthetic_job_interval)
 
+    async def md_pipeline(self, job: Job):
+        # Here we straightforwardly query the workers associated with each job and update the jobs accordingly
+        job_event = await self.forward_md(job=job)
+
+        # If we don't have any miners reply to the query, we will make it inactive.
+        if len(job_event["energies"]) == 0:
+            job.active = False
+            self.store.update_gjp_job(
+                job=job,
+                gjp_address=self.config.neuron.gjp_address,
+                keypair=self.wallet.hotkey,
+                job_id=job.job_id,
+            )
+            return
+
+        await self.update_job(job=job)
+
     async def update_jobs(self):
         """
         Updates the jobs in the queue.
@@ -621,23 +658,20 @@ class Validator(BaseValidatorNeuron):
                 for job in self.store.get_queue(
                     ready=True, validator_hotkey=self.wallet.hotkey.ss58_address
                 ).queue:
-                    # Here we straightforwardly query the workers associated with each job and update the jobs accordingly
-                    job_event = await self.forward(job=job)
+                    
+                    #TODO: This will break for now
+                    if job.job_type == "md":
+                        job_event = await self.md_pipeline(job=job)
 
-                    # If we don't have any miners reply to the query, we will make it inactive.
-                    if len(job_event["energies"]) == 0:
-                        job.active = False
-                        self.store.update_gjp_job(
-                            job=job,
-                            gjp_address=self.config.neuron.gjp_address,
-                            keypair=self.wallet.hotkey,
-                            job_id=job.job_id,
-                        )
-                        continue
+                        if isinstance(job.event, str):
+                            job.event = eval(job.event)  # if str, convert to dict.
 
-                    if isinstance(job.event, str):
-                        job.event = eval(job.event)  # if str, convert to dict.
+                    elif job.job_type == "dft":
+                        job_event = await self.forward_dft(job=job)
 
+                    else:
+                        raise ValueError(f"Invalid job type in update_jobs: {job.job_type}")
+                    
                     job.event.update(job_event)
                     job.hotkeys = [
                         self.metagraph.hotkeys[uid] for uid in job.event["uids"]
@@ -645,6 +679,7 @@ class Validator(BaseValidatorNeuron):
                     # Determine the status of the job based on the current energy and the previous values (early stopping)
                     # Update the DB with the current status
                     await self.update_job(job=job)
+
                 logger.info(f"step({self.step}) block({self.block})")
 
             except Exception as e:
