@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "folding"
-version = "3.0.1"
+version = "3.0.2"
 description = "Macrocosmos Subnet 25: Mainframe"
 authors = ["Brian McCrindle <brian@macrocosmos.ai>", "Sergio Champoux <sergio@macrocosmos.ai>", "Szymon Fonau <szymon.fonau@macrocosmos.ai>"]
 
