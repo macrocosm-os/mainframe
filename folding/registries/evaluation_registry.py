@@ -107,7 +107,6 @@ class SyntheticMDEvaluator(BaseEvaluator):
         )
 
         try:
-
             self.trajectory_path = os.path.join(
                 self.miner_data_directory, "trajectory.dcd"
             )
@@ -267,14 +266,16 @@ class SyntheticMDEvaluator(BaseEvaluator):
                 return False
         return True
 
-    def check_gradient(self, check_energies: np.ndarray) -> Tuple[bool, float]:
+    def check_gradient(
+        self, check_energies: np.ndarray, gradient_threshold: float
+    ) -> Tuple[bool, float]:
         """This method checks the gradient of the potential energy within the first
         WINDOW size of the check_energies array. Miners that return gradients that are too high,
         there is a *high* probability that they have not run the simulation as the validator specified.
         """
         mean_gradient = np.diff(check_energies[: c.GRADIENT_WINDOW_SIZE]).mean().item()
         return (
-            mean_gradient <= c.GRADIENT_THRESHOLD,
+            mean_gradient <= gradient_threshold,
             mean_gradient,
         )  # includes large negative gradients is passible
 
@@ -349,6 +350,7 @@ class SyntheticMDEvaluator(BaseEvaluator):
                 checkpoint_path=self.checkpoint_path,
                 current_cpt_step=self.cpt_step,
                 steps_to_run=c.MAX_SIMULATION_STEPS_FOR_EVALUATION,
+                gradient_threshold=c.GRADIENT_THRESHOLD_FINAL,
                 checkpoint_num="final",
             )
 
@@ -419,6 +421,7 @@ class SyntheticMDEvaluator(BaseEvaluator):
                         current_cpt_step=cpt_step,
                         steps_to_run=c.INTERMEDIATE_CHECKPOINT_STEPS,
                         checkpoint_num=checkpoint_num,
+                        gradient_threshold=c.GRADIENT_THRESHOLD_INTERMEDIATE,
                     )
 
                     checked_energies_dict[checkpoint_num] = checked_energies
@@ -599,6 +602,7 @@ class SyntheticMDEvaluator(BaseEvaluator):
         checkpoint_path: str,
         current_cpt_step: int,
         steps_to_run: int = c.MIN_SIMULATION_STEPS,
+        gradient_threshold: float = c.GRADIENT_THRESHOLD,
         checkpoint_num: str = "final",
     ):
         """Validate a checkpoint by comparing energy values from simulation to reported values.
@@ -657,7 +661,8 @@ class SyntheticMDEvaluator(BaseEvaluator):
 
         try:
             is_gradient_valid, mean_gradient = self.check_gradient(
-                check_energies=np.array(state_energies)
+                check_energies=np.array(state_energies),
+                gradient_threshold=gradient_threshold,
             )
             if not is_gradient_valid:
                 logger.warning(
@@ -728,7 +733,8 @@ class SyntheticMDEvaluator(BaseEvaluator):
                 raise ValidationError(message="reprod-energies-identical")
 
             is_gradient_valid, mean_gradient = self.check_gradient(
-                check_energies=np.array(check_energies)
+                check_energies=np.array(check_energies),
+                gradient_threshold=gradient_threshold,
             )
             if not is_gradient_valid:
                 logger.warning(
