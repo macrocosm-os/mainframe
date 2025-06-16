@@ -355,19 +355,6 @@ class Protein(OpenMMSimulation):
     def get_miner_data_directory(self, hotkey: str):
         self.miner_data_directory = os.path.join(self.validator_directory, hotkey[:8])
 
-    def check_gradient(self, check_energies: np.ndarray) -> True:
-        """This method checks the gradient of the potential energy within the first
-        WINDOW size of the check_energies array. Miners that return gradients that are too high,
-        there is a *high* probability that they have not run the simulation as the validator specified.
-        """
-        WINDOW = 50  # Number of steps to calculate the gradient over
-        GRADIENT_THRESHOLD = 10  # kJ/mol/nm
-
-        mean_gradient = np.diff(check_energies[:WINDOW]).mean().item()
-        return (
-            mean_gradient <= GRADIENT_THRESHOLD
-        )  # includes large negative gradients is passible
-
     def _calculate_epsilon(self):
         # TODO: Make this a better relationship?
         return self.epsilon
