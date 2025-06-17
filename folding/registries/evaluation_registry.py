@@ -602,7 +602,7 @@ class SyntheticMDEvaluator(BaseEvaluator):
         checkpoint_path: str,
         current_cpt_step: int,
         steps_to_run: int = c.MIN_SIMULATION_STEPS,
-        gradient_threshold: float = c.GRADIENT_THRESHOLD,
+        gradient_threshold: float = c.GRADIENT_THRESHOLD_FINAL,
         checkpoint_num: str = "final",
     ):
         """Validate a checkpoint by comparing energy values from simulation to reported values.
