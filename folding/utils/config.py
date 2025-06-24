@@ -444,7 +444,7 @@ def add_validator_args(cls, parser):
         "--neuron.gjp_address",
         type=str,
         help="The IP address and port of the global job pool.",
-        default="174.138.3.61:8030",
+        default="167.99.209.27:8030",
     )
 
     parser.add_argument(
