@@ -70,12 +70,11 @@ async def upload_to_s3(presigned_url: dict, file_path: str) -> None:
             data.add_field("file", f, filename="trajectory.dcd")
 
             async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    presigned_url["url"],
-                    data=data
-                ) as response:
+                async with session.post(presigned_url["url"], data=data) as response:
                     if response.status != 204:
-                        logger.error(f"Failed to upload trajectory to s3: {await response.text()}")
+                        logger.error(
+                            f"Failed to upload trajectory to s3: {await response.text()}"
+                        )
 
     except Exception as e:
         logger.error(f"Error uploading to S3: {e}")
@@ -115,18 +114,19 @@ def attach_files_to_synapse(
         # Start async S3 upload
         trajectory_path = os.path.join(data_directory, "trajectory.dcd")
         if os.path.exists(trajectory_path):
-            asyncio.create_task(upload_to_s3(
-                presigned_url=synapse.presigned_url,
-                file_path=trajectory_path
-            ))
+            asyncio.create_task(
+                upload_to_s3(
+                    presigned_url=synapse.presigned_url, file_path=trajectory_path
+                )
+            )
         # Normalize state for file collection
         file_collection_state = "md_0_1" if state == "finished" else state
 
         # Get cpt files (excluding logs)
-        cpt_files_pattern = os.path.join(data_directory, f"{file_collection_state}*.cpt")
-        cpt_files = [
-            f for f in glob.glob(cpt_files_pattern)
-        ]
+        cpt_files_pattern = os.path.join(
+            data_directory, f"{file_collection_state}*.cpt"
+        )
+        cpt_files = [f for f in glob.glob(cpt_files_pattern)]
 
         if not cpt_files:
             raise FileNotFoundError(
@@ -139,16 +139,13 @@ def attach_files_to_synapse(
 
         if os.path.exists(log_file):
             files_to_attach.append(log_file)
-       
 
         # Attach all files
         for filename in files_to_attach:
             try:
                 with open(filename, "rb") as f:
                     base_filename = os.path.basename(filename)
-                    synapse.md_output[base_filename] = base64.b64encode(
-                        f.read()
-                    )
+                    synapse.md_output[base_filename] = base64.b64encode(f.read())
             except Exception as e:
                 logger.error(f"Failed to read file {filename!r}: {e}")
                 get_tracebacks()
@@ -201,7 +198,7 @@ class FoldingMiner(BaseMinerNeuron):
         self.base_data_path = os.path.join(
             self.miner_data_path, self.wallet.hotkey.ss58_address[:8]
         )
-        self.local_db_address = os.getenv("RQLITE_HTTP_ADDR")
+        self.db_address = os.getenv("rqlite_ip")
         self.simulations = self.create_default_dict()
 
         self.max_workers = self.config.neuron.max_workers
@@ -215,7 +212,6 @@ class FoldingMiner(BaseMinerNeuron):
 
         self.mock = None
         self.generate_random_seed = lambda: random.randint(0, 1000)
-        asyncio.run(self.start_rqlite())
         time.sleep(5)
 
         # hardcorded for now -- TODO: make this more flexible
@@ -309,7 +305,7 @@ class FoldingMiner(BaseMinerNeuron):
         return data
 
     def fetch_sql_job_details(
-        self, columns: List[str], job_id: str, local_db_address: str
+        self, columns: List[str], job_id: str, db_address: str
     ) -> Dict:
         """
         Fetches job records from a SQLite database with given column details and a specific job_id.
@@ -317,7 +313,7 @@ class FoldingMiner(BaseMinerNeuron):
         Parameters:
             columns (list): List of column names to retrieve from the database.
             job_id (str): The identifier for the job to fetch.
-            db_path (str): Path to the SQLite database file.
+            db_address (str): Path to the global rqlite database file.
 
         Returns:
             dict: A dictionary mapping job_id to its details as specified by the columns list.
@@ -325,13 +321,13 @@ class FoldingMiner(BaseMinerNeuron):
 
         logger.info("Fetching job details from the sqlite database")
 
-        full_local_db_address = f"http://{local_db_address}/db/query"
+        full_db_address = f"http://{db_address}/db/query"
         columns_to_select = ", ".join(columns)
         query = f"""SELECT job_id, {columns_to_select} FROM jobs WHERE job_id = '{job_id}'"""
 
         try:
             response = requests.get(
-                full_local_db_address,
+                full_db_address,
                 params={"q": query, "level": "strong"},
                 timeout=10,
             )
@@ -434,7 +430,7 @@ class FoldingMiner(BaseMinerNeuron):
 
         # query your LOCAL rqlite db to get pdb_id
         sql_job_details = self.fetch_sql_job_details(
-            columns=columns, job_id=job_id, local_db_address=self.local_db_address
+            columns=columns, job_id=job_id, db_address=self.db_address
         )[0]
 
         if len(sql_job_details) == 0:
@@ -587,7 +583,9 @@ class FoldingMiner(BaseMinerNeuron):
                         )
                         event["condition"] = "found_existing_data"
                         event["state"] = state
-                        logger.info(f"Time taken for forward function: {time.time() - start_time} seconds")
+                        logger.info(
+                            f"Time taken for forward function: {time.time() - start_time} seconds"
+                        )
                         return check_synapse(synapse=synapse, event=event)
 
                     except Exception as e:
@@ -595,9 +593,10 @@ class FoldingMiner(BaseMinerNeuron):
                             f"Failed to read state file for protein {event['pdb_id']} with error: {e}"
                         )
                         state = None
-                        logger.info(f"Time taken for forward function: {time.time() - start_time} seconds")
+                        logger.info(
+                            f"Time taken for forward function: {time.time() - start_time} seconds"
+                        )
                         return check_synapse(synapse=synapse, event=event)
-
 
             # The set of RUNNING simulations.
             elif condition == "running_simulation":
@@ -616,7 +615,9 @@ class FoldingMiner(BaseMinerNeuron):
                 event["condition"] = "running_simulation"
                 event["state"] = current_executor_state
                 event["queried_at"] = simulation["queried_at"]
-                logger.info(f"Time taken for forward function: {time.time() - start_time} seconds")
+                logger.info(
+                    f"Time taken for forward function: {time.time() - start_time} seconds"
+                )
 
                 return check_synapse(synapse=synapse, event=event)
 
@@ -696,11 +697,6 @@ class FoldingMiner(BaseMinerNeuron):
         Returns:
             int: Number of jobs added to the executor
         """
-        if not self.local_db_address:
-            logger.warning(
-                "No local database address configured, cannot add active jobs"
-            )
-            return 0
 
         # Calculate how many slots are available
         available_slots = self.max_workers - len(self.simulations)
@@ -712,7 +708,7 @@ class FoldingMiner(BaseMinerNeuron):
         jobs_to_fetch = limit if limit is not None else available_slots
 
         # Query the database for active jobs that are not already being processed
-        full_local_db_address = f"http://{self.local_db_address}/db/query"
+        full_db_address = f"http://{self.db_address}/db/query"
         # We need columns that identify the job and contain essential configuration
         columns_to_select = "pdb_id, system_config, priority, s3_links"
         query = f"""SELECT job_id, {columns_to_select} FROM jobs 
@@ -722,7 +718,7 @@ class FoldingMiner(BaseMinerNeuron):
 
         try:
             response = requests.get(
-                full_local_db_address,
+                full_db_address,
                 params={"q": query, "level": "strong"},
                 timeout=10,
             )
@@ -1085,7 +1081,7 @@ class SimulationManager:
                 )
             )
 
-            if state =="nvt":
+            if state == "nvt":
                 simulation.reporters.append(
                     app.DCDReporter(
                         file=os.path.join(self.output_dir, "trajectory.dcd"),
