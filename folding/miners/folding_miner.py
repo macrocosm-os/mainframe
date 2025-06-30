@@ -198,7 +198,7 @@ class FoldingMiner(BaseMinerNeuron):
         self.base_data_path = os.path.join(
             self.miner_data_path, self.wallet.hotkey.ss58_address[:8]
         )
-        self.db_address = os.getenv("rqlite_ip")
+        self.db_address = os.getenv("JOIN_ADDR").split(":")[0] + ":4001"
         self.simulations = self.create_default_dict()
 
         self.max_workers = self.config.neuron.max_workers
