@@ -19,8 +19,7 @@ from gjp_models.models import JobBase, SystemConfig, SystemKwargs
 load_dotenv()
 
 rqlite_data_dir = os.getenv("RQLITE_DATA_DIR")
-rqlite_ip = os.getenv("JOIN_ADDR").split(":")[0]
-local_db_addr = os.getenv("RQLITE_HTTP_ADDR")
+db_addr = os.getenv("JOIN_ADDR").split(":")[0] + ":4001"
 
 if rqlite_data_dir is None:
     raise ValueError(
@@ -88,12 +87,12 @@ class SQLiteJobStore:
                 AND validator_hotkey = '{validator_hotkey}'
             """
             response = requests.get(
-                f"http://{local_db_addr}/db/query",
+                f"http://{db_addr}/db/query",
                 params={"q": query, "level": "strong"},
             )
         else:
             response = requests.get(
-                f"http://{local_db_addr}/db/query",
+                f"http://{db_addr}/db/query",
                 params={
                     "q": f"SELECT * FROM {self.table_name} WHERE active = 1 AND validator_hotkey = '{validator_hotkey}'",
                     "level": "strong",
@@ -134,7 +133,7 @@ class SQLiteJobStore:
             ORDER BY updated_at ASC
         """
         response = requests.get(
-            f"http://{local_db_addr}/db/query",
+            f"http://{db_addr}/db/query",
             params={
                 "q": query,
                 "consistency": "strong",
@@ -199,7 +198,7 @@ class SQLiteJobStore:
             list: List of PDB IDs as strings
         """
         response = requests.get(
-            f"http://{local_db_addr}/db/query",
+            f"http://{db_addr}/db/query",
             params={
                 "q": f"SELECT pdb_id FROM {self.table_name}",
                 "consistency": "strong",
@@ -311,7 +310,7 @@ class SQLiteJobStore:
         """
 
         response = requests.get(
-            f"http://{rqlite_ip}:4001/db/query",
+            f"http://{db_addr}/db/query",
             params={"q": f"SELECT * FROM jobs WHERE job_id = '{job_id}'"},
         )
         if response.status_code != 200:
@@ -336,13 +335,13 @@ class SQLiteJobStore:
         Returns:
             bool: True if the database has changed, False otherwise.
         """
-        response = requests.get(f"http://{rqlite_ip}:4001/status?pretty ")
+        response = requests.get(f"http://{db_addr}/status?pretty ")
         if response.status_code != 200:
             raise ValueError(f"Failed to monitor db: {response.text}")
 
         last_log_leader = response.json()["store"]["raft"]["last_log_index"]
 
-        response = requests.get(f"http://{local_db_addr}/status?pretty ")
+        response = requests.get(f"http://{db_addr}/status?pretty ")
         if response.status_code != 200:
             raise ValueError(f"Failed to monitor db: {response.text}")
         last_log_read = response.json()["store"]["raft"]["last_log_index"]
