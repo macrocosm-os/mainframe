@@ -217,28 +217,3 @@ class BaseNeuron(ABC):
         logger.warning(
             "load_state() not implemented for this neuron. You can implement this function to load model checkpoints or other useful data."
         )
-
-    async def start_rqlite(self):
-        """
-        Starts the rqlite service.
-        """
-        logger.info("Starting rqlite service...")
-
-        # stops the rqlite service if it is running
-        os.system("pkill rqlited")
-
-        # checks if db exists and if yes deletes it
-        if os.path.exists(os.path.join(self.project_path, self.rqlite_data_dir)):
-            logger.info("Deleting existing db")
-            os.system(
-                f"sudo rm -rf {os.path.join(self.project_path, self.rqlite_data_dir)}"
-            )
-
-        # waits for rqlite to stop
-        await asyncio.sleep(10)
-
-        # starts the rqlite read node
-        subprocess.Popen(
-            ["bash", os.path.join(self.project_path, "scripts", "start_read_node.sh")]
-        )
-        logger.info("rqlite service started.")

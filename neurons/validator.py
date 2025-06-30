@@ -773,27 +773,6 @@ class Validator(BaseValidatorNeuron):
             except Exception as e:
                 logger.error(f"Error in sync_loop: {traceback.format_exc()}")
 
-    async def monitor_db(self):
-        """
-        Monitors the database for any changes.
-        """
-        while True:
-            try:
-                await asyncio.sleep(300)
-                try:
-                    outdated = await self.store.monitor_db()
-                except Exception as e:
-                    logger.error(f"Error in monitor_db: {traceback.format_exc()}")
-                    await self.start_rqlite()
-
-                if outdated:
-                    logger.error("Database is outdated. Restarting rqlite.")
-                    await self.start_rqlite()
-                else:
-                    logger.debug("Database is up-to-date.")
-            except Exception as e:
-                logger.error(f"Error in monitor_db: {traceback.format_exc()}")
-
     async def monitor_validator(self):
         while True:
             await asyncio.sleep(3600)
@@ -814,14 +793,12 @@ class Validator(BaseValidatorNeuron):
                 self.should_exit = True
 
     async def __aenter__(self):
-        await self.start_rqlite()
         await asyncio.sleep(10)  # Wait for rqlite to start
 
         self.loop.create_task(self.sync_loop())
         self.loop.create_task(self.update_jobs())
         self.loop.create_task(self.create_synthetic_jobs())
         self.loop.create_task(self.reward_loop())
-        self.loop.create_task(self.monitor_db())
         if self.config.neuron.organic_enabled:
             logger.info("Starting organic scoring loop.")
             self.loop.create_task(self._organic_scoring.start_loop())
