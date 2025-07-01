@@ -47,6 +47,8 @@ class BaseMinerNeuron(BaseNeuron):
             priority_fn=self.priority,
         ).attach(
             forward_fn=self.intermediate_submission_forward,
+            blacklist_fn=self.blacklist,
+            priority_fn=self.priority,
         )
         logger.info(f"Axon created: {self.axon}")
 
