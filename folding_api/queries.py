@@ -5,6 +5,7 @@ from collections import defaultdict
 from folding_api.schemas import FoldingSchema, FoldingReturn
 from folding_api.utils import make_request
 from folding_api.validator_registry import ValidatorRegistry
+from folding_api.database import db_manager
 
 
 async def query_validators(
@@ -48,7 +49,20 @@ async def query_validators(
         if resp is not None:
             response_information["status_codes"].append(resp.status_code)
             if resp.status_code == 200:
-                response_information["job_id"].append(resp.json()["job_id"])
+                job_id = resp.json()["job_id"]
+                response_information["job_id"].append(job_id)
+                
+                # Insert successful job into database
+                try:
+                    await db_manager.insert_protein_job(
+                        job_id=job_id,
+                        pdb_id=schema.pdb_id,
+                        user_id=schema.user_id
+                    )
+                except Exception as e:
+                    # Log the error but don't fail the request
+                    from loguru import logger
+                    logger.error(f"Failed to insert protein job to database: {e}")
             else:
                 response_information["job_id"].append(None)
         else:

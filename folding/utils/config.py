@@ -437,7 +437,7 @@ def add_validator_args(cls, parser):
         nargs="+",  # Accepts one or more values as a list
         help="The validator will only accept organic queries from a list of whitelisted hotkeys.",
         default=[
-            "5Cg5QgjMfRqBC6bh8X4PDbQi7UzVRn9eyWXsB8gkyfppFPPy",
+            "5FYwKoHYfiuy9m2yM4wbwM5pQyaEP38MBTTZS8RwNKRuQ8mi",
         ],
     )
     parser.add_argument(
