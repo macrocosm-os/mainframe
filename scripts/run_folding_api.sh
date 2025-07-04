@@ -1,0 +1,1 @@
+python folding_api/main.py --netuid 25 --subtensor.network finney --wallet.name cfusion --wallet.hotkey v1 --gjp-address 167.99.209.27:4001

@@ -1,6 +1,6 @@
 import subprocess
 from typing import Optional, Literal
-from fastapi import APIRouter, HTTPException, Query, Depends, Request
+from fastapi import APIRouter, HTTPException, Query, Depends, Request, Path
 from http import HTTPStatus
 import pickle
 import os
@@ -16,6 +16,7 @@ from folding_api.schemas import (
     Job,
     JobResponse,
     Miner,
+    UserPDBResponse,
 )
 from folding_api.auth import APIKey, get_api_key
 from folding_api.utils import query_gjp
@@ -622,3 +623,43 @@ async def get_job(
         created_at=job.get("created_at", ""),
         updated_at=job.get("updated_at", ""),
     )
+
+
+@router.get("/user/{user_id}/pdb-ids", response_model=UserPDBResponse)
+async def get_user_pdb_ids(
+    request: Request,
+    user_id: str = Path(..., description="The user identifier"),
+    api_key: APIKey = Depends(get_api_key),
+) -> UserPDBResponse:
+    """
+    Get all PDB IDs associated with jobs for a specific user.
+    
+    This endpoint returns a list of unique PDB IDs from all protein folding jobs
+    submitted by the specified user.
+    """
+    try:
+        # Get the database manager from app state
+        db_manager = request.app.state.db_manager
+        
+        # Query jobs for the specific user
+        jobs = await db_manager.get_protein_jobs(user_id=user_id)
+        
+        # Extract unique PDB IDs
+        pdb_ids = list(set(job["pdb_id"] for job in jobs))
+        pdb_ids.sort()  # Sort for consistent ordering
+        
+        return UserPDBResponse(
+            user_id=user_id,
+            pdb_ids=pdb_ids,
+            total=len(pdb_ids)
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Unexpected error getting PDB IDs for user {user_id}: {e}")
+        
+        raise HTTPException(
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred. Please have an admin check the logs and try again later.",
+        )

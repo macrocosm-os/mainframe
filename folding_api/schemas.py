@@ -54,6 +54,9 @@ class FoldingSchema(BaseModel):
         ...,
         description="The base epsilon that should be used for the challenge. Represented in %/100",
     )
+    user_id: str = Field(
+        ..., description="The user identifier for tracking job ownership."
+    )
 
     validator_uids: list[int] = Field(
         ..., description="The validator identifier for the selected response source."
@@ -190,6 +193,16 @@ class PDBSearchResponse(BaseModel):
 
     matches: List[PDB] = Field(..., description="List of matching PDB IDs")
     total: int = Field(..., description="Total number of matches found")
+
+
+class UserPDBResponse(BaseModel):
+    """
+    Represents a response containing PDB IDs for a specific user.
+    """
+
+    user_id: str = Field(..., description="The user identifier")
+    pdb_ids: List[str] = Field(..., description="List of PDB IDs for the user")
+    total: int = Field(..., description="Total number of PDB IDs found")
 
 
 class PDBInfoResponse(BaseModel):
