@@ -17,6 +17,7 @@ from folding_api.schemas import (
     JobResponse,
     Miner,
     UserPDBResponse,
+    UserPDBEntry,
 )
 from folding_api.auth import APIKey, get_api_key
 from folding_api.utils import query_gjp
@@ -632,10 +633,10 @@ async def get_user_pdb_ids(
     api_key: APIKey = Depends(get_api_key),
 ) -> UserPDBResponse:
     """
-    Get all PDB IDs associated with jobs for a specific user.
+    Get all protein folding jobs for a specific user.
     
-    This endpoint returns a list of unique PDB IDs from all protein folding jobs
-    submitted by the specified user.
+    This endpoint returns a list of all protein folding jobs submitted by the specified user,
+    including job ID, PDB ID, and creation timestamp for each job.
     """
     try:
         # Get the database manager from app state
@@ -644,14 +645,23 @@ async def get_user_pdb_ids(
         # Query jobs for the specific user
         jobs = await db_manager.get_protein_jobs(user_id=user_id)
         
-        # Extract unique PDB IDs
-        pdb_ids = list(set(job["pdb_id"] for job in jobs))
-        pdb_ids.sort()  # Sort for consistent ordering
+        # Create PDB entries with creation timestamps (one per job)
+        pdb_entries = [
+            UserPDBEntry(
+                job_id=job["job_id"],
+                pdb_id=job["pdb_id"], 
+                created_at=job["created_at"]
+            )
+            for job in jobs
+        ]
+        
+        # Sort by creation date, youngest (most recent) first
+        pdb_entries.sort(key=lambda x: x.created_at, reverse=True)
         
         return UserPDBResponse(
             user_id=user_id,
-            pdb_ids=pdb_ids,
-            total=len(pdb_ids)
+            pdb_entries=pdb_entries,
+            total=len(pdb_entries)
         )
         
     except HTTPException:

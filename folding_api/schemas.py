@@ -195,14 +195,24 @@ class PDBSearchResponse(BaseModel):
     total: int = Field(..., description="Total number of matches found")
 
 
+class UserPDBEntry(BaseModel):
+    """
+    Represents a PDB job entry with creation timestamp for a user.
+    """
+    
+    job_id: str = Field(..., description="The job identifier")
+    pdb_id: str = Field(..., description="The PDB identifier")
+    created_at: str = Field(..., description="When this job was created")
+
+
 class UserPDBResponse(BaseModel):
     """
-    Represents a response containing PDB IDs for a specific user.
+    Represents a response containing protein folding jobs for a specific user.
     """
 
     user_id: str = Field(..., description="The user identifier")
-    pdb_ids: List[str] = Field(..., description="List of PDB IDs for the user")
-    total: int = Field(..., description="Total number of PDB IDs found")
+    pdb_entries: List[UserPDBEntry] = Field(..., description="List of protein folding jobs with job ID, PDB ID and creation timestamps")
+    total: int = Field(..., description="Total number of jobs found")
 
 
 class PDBInfoResponse(BaseModel):
