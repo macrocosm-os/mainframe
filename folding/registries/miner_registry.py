@@ -25,7 +25,7 @@ class MinerData(BaseModel):
 
     overall_credibility: float = c.STARTING_CREDIBILITY
     tasks: Dict[str, TaskMetrics] = field(default_factory=dict)
-    logs: Dict[str, Any] = {}
+    logs: Dict[str, Any] = field(default_factory=dict)
 
 
 class MinerRegistry:
@@ -145,7 +145,7 @@ class MinerRegistry:
         all_miner_logs = {}
 
         for miner_uid, miner_data in self.registry.items():
-            if not miner_data.logs:
+            if not hasattr(miner_data, "logs") or miner_data.logs is None:
                 self._initialize_miner_logs(miner_uid)
             all_miner_logs[miner_uid] = miner_data.logs
 

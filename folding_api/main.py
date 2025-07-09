@@ -12,6 +12,7 @@ from folding_api.protein import router
 from folding_api.utility_endpoints import router as utility_router
 from folding_api.validator_registry import ValidatorRegistry
 from folding_api.auth import APIKeyManager, get_api_key, api_key_router
+from folding_api.database import db_manager
 from folding_api.vars import (
     bt_config,
     limiter,
@@ -49,6 +50,10 @@ async def lifespan(app: FastAPI):
     # Initialize API key manager
     api_key_manager = APIKeyManager()
     app.state.api_key_manager = api_key_manager
+
+    # Initialize database
+    await db_manager.init_database()
+    app.state.db_manager = db_manager
 
     # Start background sync task
     app.state.sync_task = asyncio.create_task(

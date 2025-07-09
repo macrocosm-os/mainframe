@@ -54,6 +54,9 @@ class FoldingSchema(BaseModel):
         ...,
         description="The base epsilon that should be used for the challenge. Represented in %/100",
     )
+    user_id: str = Field(
+        ..., description="The user identifier for tracking job ownership."
+    )
 
     validator_uids: list[int] = Field(
         ..., description="The validator identifier for the selected response source."
@@ -190,6 +193,26 @@ class PDBSearchResponse(BaseModel):
 
     matches: List[PDB] = Field(..., description="List of matching PDB IDs")
     total: int = Field(..., description="Total number of matches found")
+
+
+class UserPDBEntry(BaseModel):
+    """
+    Represents a PDB job entry with creation timestamp for a user.
+    """
+    
+    job_id: str = Field(..., description="The job identifier")
+    pdb_id: str = Field(..., description="The PDB identifier")
+    created_at: str = Field(..., description="When this job was created")
+
+
+class UserPDBResponse(BaseModel):
+    """
+    Represents a response containing protein folding jobs for a specific user.
+    """
+
+    user_id: str = Field(..., description="The user identifier")
+    pdb_entries: List[UserPDBEntry] = Field(..., description="List of protein folding jobs with job ID, PDB ID and creation timestamps")
+    total: int = Field(..., description="Total number of jobs found")
 
 
 class PDBInfoResponse(BaseModel):

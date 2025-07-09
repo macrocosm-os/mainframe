@@ -1,6 +1,6 @@
 import subprocess
 from typing import Optional, Literal
-from fastapi import APIRouter, HTTPException, Query, Depends, Request
+from fastapi import APIRouter, HTTPException, Query, Depends, Request, Path
 from http import HTTPStatus
 import pickle
 import os
@@ -16,6 +16,8 @@ from folding_api.schemas import (
     Job,
     JobResponse,
     Miner,
+    UserPDBResponse,
+    UserPDBEntry,
 )
 from folding_api.auth import APIKey, get_api_key
 from folding_api.utils import query_gjp
@@ -622,3 +624,52 @@ async def get_job(
         created_at=job.get("created_at", ""),
         updated_at=job.get("updated_at", ""),
     )
+
+
+@router.get("/user/{user_id}/pdb-ids", response_model=UserPDBResponse)
+async def get_user_pdb_ids(
+    request: Request,
+    user_id: str = Path(..., description="The user identifier"),
+    api_key: APIKey = Depends(get_api_key),
+) -> UserPDBResponse:
+    """
+    Get all protein folding jobs for a specific user.
+    
+    This endpoint returns a list of all protein folding jobs submitted by the specified user,
+    including job ID, PDB ID, and creation timestamp for each job.
+    """
+    try:
+        # Get the database manager from app state
+        db_manager = request.app.state.db_manager
+        
+        # Query jobs for the specific user
+        jobs = await db_manager.get_protein_jobs(user_id=user_id)
+        
+        # Create PDB entries with creation timestamps (one per job)
+        pdb_entries = [
+            UserPDBEntry(
+                job_id=job["job_id"],
+                pdb_id=job["pdb_id"], 
+                created_at=job["created_at"]
+            )
+            for job in jobs
+        ]
+        
+        # Sort by creation date, youngest (most recent) first
+        pdb_entries.sort(key=lambda x: x.created_at, reverse=True)
+        
+        return UserPDBResponse(
+            user_id=user_id,
+            pdb_entries=pdb_entries,
+            total=len(pdb_entries)
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Unexpected error getting PDB IDs for user {user_id}: {e}")
+        
+        raise HTTPException(
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred. Please have an admin check the logs and try again later.",
+        )
