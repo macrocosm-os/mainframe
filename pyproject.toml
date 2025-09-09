@@ -10,6 +10,7 @@ torch = "^2.3.0"
 loguru = "0.7.2"
 pandas = "*"
 bittensor = "^9.9.0"
+numpy = "<2.3"
 tenacity = "9.0.0"
 python-dotenv = "1.0.1"
 wandb = "0.17.2"
@@ -21,8 +22,8 @@ async-timeout = "4.0.3"
 pdbfixer = { git = "https://github.com/macrocosm-os/pdbfixer.git", branch = "master" }
 ipykernel = "^6.29.5"
 tqdm = "^4.67.0"
-openmm = {extras = ["cuda12"], version = "^8.2.0"}
-openmm-cuda-12 = "^8.2.0"
+openmm = {extras = ["cuda12"], version = "8.2.0"}
+openmm-cuda-12 = "8.2.0"
 atom = { git = "https://github.com/macrocosm-os/atom.git", branch = "main" }
 requests = "^2.32.3"
 boto3 = "^1.35.95"
