@@ -133,6 +133,14 @@ class BaseValidatorNeuron(BaseNeuron):
                 f"Scores contain NaN values. This may be due to a lack of responses from miners, or a bug in your reward functions."
             )
 
+        # before we do anything, make sure that we set the validators scores to 0.
+        valid_indices = np.where(self.metagraph.validator_permit)[0]
+        for uid in valid_indices:
+            try:
+                self.scores[uid] = 0
+            except IndexError:
+                logger.warning(f"IndexError: {uid} is not in the scores array.")
+
         # Calculate the average reward for each uid across non-zero values.
         # Replace any NaN values with 0.
         raw_weights = (
