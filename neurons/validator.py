@@ -277,7 +277,7 @@ class Validator(BaseValidatorNeuron):
                 job_event["s3_links"] = {
                     "testing": "testing"
                 }  # overwritten below if s3 logging is on.
-                async with timeout(300):
+                async with timeout(600):
                     logger.info(
                         f"setup_simulation for organic query: {job_event['pdb_id']}"
                     )

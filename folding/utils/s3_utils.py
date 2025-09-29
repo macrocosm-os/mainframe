@@ -76,7 +76,7 @@ class BaseHandler(ABC):
         pass
 
     @abstractmethod
-    def generate_presigned_url(self, key: str, expires_in: int = 3600) -> str:
+    def generate_presigned_url(self, key: str, expires_in: int = 7200) -> str:
         """Generates a presigned URL for temporary access to an object."""
         pass
 
@@ -218,7 +218,7 @@ class DigitalOceanS3Handler(BaseHandler):
         miner_hotkey: str,
         pdb_id: str,
         file_name: str,
-        expires_in: int = 3600,
+        expires_in: int = 7200,
         method: str = "get_object",
     ) -> dict[str, Any]:
         """Generates a presigned URL for temporary access to an object.
