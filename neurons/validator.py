@@ -7,7 +7,7 @@ import time
 import asyncio
 import traceback
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List
 
 import netaddr
@@ -104,10 +104,10 @@ class Validator(BaseValidatorNeuron):
         self.last_time_checked = (
             self.last_time_checked
             if hasattr(self, "last_time_checked")
-            else datetime.now()
+            else datetime.now(timezone.utc)
         )
 
-        self.last_time_created_jobs = datetime.now()
+        self.last_time_created_jobs = datetime.now(timezone.utc)
 
         if not self.config.s3.off:
             try:
@@ -277,7 +277,7 @@ class Validator(BaseValidatorNeuron):
                 job_event["s3_links"] = {
                     "testing": "testing"
                 }  # overwritten below if s3 logging is on.
-                async with timeout(300):
+                async with timeout(600):
                     logger.info(
                         f"setup_simulation for organic query: {job_event['pdb_id']}"
                     )
@@ -308,7 +308,7 @@ class Validator(BaseValidatorNeuron):
                             str(spec_version),
                             job_event["pdb_id"],
                             self.validator_hotkey_reference,
-                            datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
+                            datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S"),
                         )
                         s3_links = {}
                         for file_type, file_path in files_to_upload.items():
@@ -350,7 +350,7 @@ class Validator(BaseValidatorNeuron):
 
             logger.success("Job was uploaded successfully!")
 
-            self.last_time_created_jobs = datetime.now()
+            self.last_time_created_jobs = datetime.now(timezone.utc)
 
             # TODO: return job_id
             return True
@@ -501,7 +501,7 @@ class Validator(BaseValidatorNeuron):
                 output_links.append(defaultdict(str))
 
             best_cpt_files = []
-            output_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            output_time = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
 
             for idx, (uid, files) in enumerate(
                 zip(job.event["processed_uids"], job.event["files"])
@@ -664,7 +664,7 @@ class Validator(BaseValidatorNeuron):
             last_time_checked=self.last_time_checked.strftime("%Y-%m-%dT%H:%M:%S")
         )
 
-        self.last_time_checked = datetime.now()
+        self.last_time_checked = datetime.now(timezone.utc)
 
         if inactive_jobs_queue.qsize() == 0:
             logger.info("No inactive jobs to update.")

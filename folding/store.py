@@ -5,12 +5,10 @@ import random
 import sqlite3
 import requests
 from queue import Queue
-from typing import Dict, List
+from typing import List
 from dotenv import load_dotenv
-
+from datetime import timezone
 from datetime import datetime
-
-import numpy as np
 import pandas as pd
 
 from atom.epistula.epistula import Epistula
@@ -79,7 +77,7 @@ class SQLiteJobStore:
 
         if ready:
             # Calculate the threshold time for ready jobs
-            now = datetime.utcnow().isoformat()
+            now = datetime.now(timezone.utc).isoformat()
             query = f"""
                 SELECT * FROM {self.table_name}
                 WHERE active = 1
@@ -359,7 +357,7 @@ class Job(JobBase):
         self.best_loss = loss
         self.best_loss_at = pd.Timestamp.now().floor("s")
         self.best_hotkey = hotkey
-        self.updated_at = datetime.now()
+        self.updated_at = datetime.now(timezone.utc)
 
 
 class MockJob(Job):
