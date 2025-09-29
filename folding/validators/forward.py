@@ -159,7 +159,7 @@ async def try_prepare_md_challenge(self, config, pdb_id: str) -> Dict:
         )
 
         try:
-            async with timeout(300):
+            async with timeout(600):
                 await protein.setup_simulation()
 
             if protein.init_energy > 0:
